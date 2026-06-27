@@ -15,6 +15,7 @@ for rel in (
     "services/forecaster",
     "services/risk-engine",
     "services/api",
+    "services/edge-gateway",
     "sims",
     ".",  # eval is imported as a package from repo root
 ):
