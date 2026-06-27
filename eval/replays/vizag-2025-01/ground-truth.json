@@ -1,0 +1,25 @@
+{
+  "incidentId": "vizag-2025-01",
+  "title": "Visakhapatnam Steel Plant coke-oven gas incident (reconstructed)",
+  "zoneId": "B-04",
+  "breachTs": "2025-01-13T07:05:00+00:00",
+  "thresholdSensor": "LEL-04",
+  "thresholds": {
+    "gas-lel": 100.0,
+    "gas-co": 50.0
+  },
+  "expectedConvergence": [
+    "hot-work permit",
+    "rising flammable gas",
+    "shift changeover"
+  ],
+  "injectedHealth": [
+    {
+      "sensorId": "LEL-04",
+      "state": "stale",
+      "from": "06:38",
+      "to": "06:42"
+    }
+  ],
+  "source": "The Wire investigation + public DGFASLI summary (synthesis, not extraction)"
+}
