@@ -20,6 +20,7 @@ from verge_orchestrator import respond
 from verge_risk.health import ribbon as health_ribbon  # noqa: F401 (kept in sync)
 from verge_schema.enums import FeedbackVerdict
 from verge_schema.enums import FindingState as S
+from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
 
 from .seed import seed
@@ -67,6 +68,14 @@ def health() -> dict:
 @app.get("/api/findings")
 def list_findings(state: str | None = None) -> list[dict]:
     return [f.model_dump(by_alias=True, mode="json") for f in store.list_findings(state)]
+
+
+@app.post("/api/findings")
+def ingest_finding(finding: RiskFinding) -> dict:
+    """Ingest a finding from the streaming risk-engine (the live path) so it
+    appears on the console. Idempotent on finding_id."""
+    store.add_finding(finding)
+    return finding.model_dump(by_alias=True, mode="json")
 
 
 @app.get("/api/findings/{finding_id}")

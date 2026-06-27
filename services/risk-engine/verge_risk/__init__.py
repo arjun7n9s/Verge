@@ -6,6 +6,7 @@ from .context import RiskContext, ZoneView
 from .engine import evaluate
 from .health import classify, is_degraded, ribbon
 from .rules import Rule, load_rules
+from .runner import StreamState, run_stream
 
 STARTER_RULES = Path(__file__).parent / "rules"
 
@@ -13,11 +14,13 @@ __all__ = [
     "STARTER_RULES",
     "RiskContext",
     "Rule",
+    "StreamState",
     "ZoneView",
     "classify",
     "evaluate",
     "is_degraded",
     "load_rules",
     "ribbon",
+    "run_stream",
 ]
 __version__ = "0.3.0"

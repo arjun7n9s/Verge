@@ -58,6 +58,19 @@ make eval      # run the replay harness vs. baselines B0/B1/B2
 make test      # uv run pytest (whole workspace)
 ```
 
+**The live path** (sims → risk-engine → API → console), no broker needed:
+
+```bash
+# stream a scenario through the engine; findings print as they fire
+uv run verge sim --scenario vizag-like | uv run python -m verge_risk
+
+# ...and feed them to the running console
+uv run verge sim --scenario vizag-like | uv run python -m verge_risk --post http://localhost:8000
+```
+
+In production the engine consumes the same canonical events from Redpanda
+(`python -m verge_risk --redpanda localhost:19092 --topic verge.events`).
+
 See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.
 
 ## Status
