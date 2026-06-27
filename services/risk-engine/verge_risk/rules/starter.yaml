@@ -1,0 +1,57 @@
+# Verge starter rule library (spec §14.5 step 3).
+# Known fatal combinations drawn from OISD standards, the CSB database, and the
+# public incident corpus. Plants adopt this and customize per zone; they do not
+# author from zero. ~30 rules ship in the full library; this is the core subset.
+
+- id: hot-work-elevated-gas-changeover
+  name: Hot work + rising flammable gas during shift changeover
+  severity: critical
+  base_confidence: 0.85
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+      min_rise_per_min: 0.0
+    - type: shift_changeover
+  forecast:
+    sensor_kind: gas-lel
+
+- id: hot-work-elevated-gas
+  name: Hot work near elevated/rising flammable gas
+  severity: critical
+  base_confidence: 0.8
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-lel
+
+- id: confined-space-toxic-gas
+  name: Confined-space entry with rising toxic gas
+  severity: critical
+  base_confidence: 0.85
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: gas_near_threshold
+      sensor_kind: gas-co
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-co
+
+- id: gas-drift-changeover
+  name: Gas drift during shift changeover (handover blind spot)
+  severity: warning
+  base_confidence: 0.6
+  all:
+    - type: gas_near_threshold
+      sensor_kind: gas-co
+      pct: 0.25
+    - type: shift_changeover
+  forecast:
+    sensor_kind: gas-co
