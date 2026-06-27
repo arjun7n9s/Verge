@@ -39,6 +39,7 @@ evidence — all able to run **inside an air-gapped plant network**.
 | `services/risk-engine` | Compound Risk Engine + sensor-health plane (LLM-independent) |
 | `services/forecaster` | Rate-based lead-time **bands** |
 | `services/orchestrator` | Advisory response — alerts, evidence packs, report drafts (P8) |
+| `services/permit` | Digital permit-to-work + SIMOPS spatial-temporal conflict detection |
 | `services/api` | FastAPI gateway, SSE/WebSocket fan-out |
 | `apps/console` | Operator console (React + Vite + MapLibre/deck.gl) |
 | `eval` | Replay-provable eval harness + incident datasets |

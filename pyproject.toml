@@ -13,6 +13,7 @@ dependencies = [
   "verge-forecaster",
   "verge-edge-gateway",
   "verge-orchestrator",
+  "verge-permit",
   "verge-sims",
   "verge-cli",
   "verge-api",
@@ -36,6 +37,7 @@ members = [
   "services/risk-engine",
   "services/forecaster",
   "services/orchestrator",
+  "services/permit",
   "sims",
   "cli",
 ]
@@ -48,6 +50,7 @@ verge-risk-engine = { workspace = true }
 verge-forecaster = { workspace = true }
 verge-edge-gateway = { workspace = true }
 verge-orchestrator = { workspace = true }
+verge-permit = { workspace = true }
 verge-sims = { workspace = true }
 verge-cli = { workspace = true }
 verge-api = { workspace = true }

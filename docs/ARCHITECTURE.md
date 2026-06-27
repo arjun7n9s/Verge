@@ -22,6 +22,7 @@ Five planes (spec §2). Data flows up; the **safety core is LLM-independent** (P
 | §4.5 Finding lifecycle | `packages/schema/verge_schema/lifecycle.py` |
 | §4.6 Alert fatigue (feedback, FPR) | `services/api` store + `FindingFeedback` |
 | §4.7 Sensor-health plane | `services/risk-engine/verge_risk/health.py` |
+| §5 Pillar 4 — SIMOPS permit conflicts | `services/permit/verge_permit/conflicts.py` |
 | §6 Safety Rules DSL | `services/risk-engine/verge_risk/rules.py` + `rules/*.yaml` |
 | §10 Eval harness + baselines | `eval/harness.py`, `eval/baselines/` |
 | §10.6 Graceful degradation | LLM `degraded`, edge `StoreAndForward`, `/health` |

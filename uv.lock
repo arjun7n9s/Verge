@@ -12,6 +12,7 @@ members = [
     "verge-forecaster",
     "verge-llm",
     "verge-orchestrator",
+    "verge-permit",
     "verge-risk-engine",
     "verge-schema",
     "verge-sims",
@@ -701,6 +702,7 @@ dependencies = [
     { name = "verge-forecaster" },
     { name = "verge-llm" },
     { name = "verge-orchestrator" },
+    { name = "verge-permit" },
     { name = "verge-risk-engine" },
     { name = "verge-schema" },
     { name = "verge-sims" },
@@ -722,6 +724,7 @@ requires-dist = [
     { name = "verge-forecaster", editable = "services/forecaster" },
     { name = "verge-llm", editable = "packages/llm" },
     { name = "verge-orchestrator", editable = "services/orchestrator" },
+    { name = "verge-permit", editable = "services/permit" },
     { name = "verge-risk-engine", editable = "services/risk-engine" },
     { name = "verge-schema", editable = "packages/schema" },
     { name = "verge-sims", editable = "sims" },
@@ -854,6 +857,17 @@ requires-dist = [
     { name = "verge-llm", editable = "packages/llm" },
     { name = "verge-schema", editable = "packages/schema" },
 ]
+
+[[package]]
+name = "verge-permit"
+version = "0.3.0"
+source = { editable = "services/permit" }
+dependencies = [
+    { name = "verge-schema" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "verge-schema", editable = "packages/schema" }]
 
 [[package]]
 name = "verge-risk-engine"
