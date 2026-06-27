@@ -1,0 +1,16 @@
+{
+  "incidentId": "bp-texas-city-2005",
+  "title": "BP Texas City raffinate splitter explosion (reconstructed)",
+  "zoneId": "RS-T",
+  "breachTs": "2005-03-23T12:38:00+00:00",
+  "thresholdSensor": "LEL-RS",
+  "thresholds": {
+    "gas-lel": 100.0,
+    "gas-co": 50.0
+  },
+  "expectedConvergence": [
+    "hot-work permit",
+    "rising flammable gas"
+  ],
+  "source": "CSB final report (synthesis, not extraction)"
+}

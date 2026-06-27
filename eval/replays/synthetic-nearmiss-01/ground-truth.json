@@ -1,0 +1,16 @@
+{
+  "incidentId": "synthetic-nearmiss-01",
+  "title": "Confined-space entry with rising CO (synthetic near-miss)",
+  "zoneId": "CS-7",
+  "breachTs": "2025-06-01T09:25:00+00:00",
+  "thresholdSensor": "CO-CS",
+  "thresholds": {
+    "gas-co": 50.0
+  },
+  "expectedConvergence": [
+    "confined-space permit",
+    "rising toxic gas"
+  ],
+  "outcome": "near-miss \u2014 operator acted before breach",
+  "source": "Fully synthetic, documented (not a real incident)"
+}

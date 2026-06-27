@@ -21,7 +21,7 @@ jobs:
         run: uv run pytest
       - name: Eval harness vs baselines B0/B1/B2
         run: |
-          uv run python eval/replays/vizag-2025-01/generate.py
+          for f in eval/replays/*/generate.py; do uv run python "$f"; done
           uv run verge replay --all
       - name: Upload replay report
         if: always()

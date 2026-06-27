@@ -1,0 +1,15 @@
+{
+  "incidentId": "jaipur-ioc-2009",
+  "title": "Jaipur IOC tank-farm fire (reconstructed)",
+  "zoneId": "TF-A",
+  "breachTs": "2009-10-29T18:33:00+00:00",
+  "thresholdSensor": "LEL-TF",
+  "thresholds": {
+    "gas-lel": 100.0
+  },
+  "expectedConvergence": [
+    "hot-work permit",
+    "rising flammable gas"
+  ],
+  "source": "Public inquiry report (synthesis, not extraction)"
+}
