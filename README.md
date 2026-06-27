@@ -49,10 +49,12 @@ evidence — all able to run **inside an air-gapped plant network**.
 ## Quickstart
 
 ```bash
+make install   # uv sync (Python workspace) + pnpm install (console)
 make up        # bring up infra (docker compose)
 make seed      # (re)generate the Vizag replay dataset
 make dev       # run api + console
 make eval      # run the replay harness vs. baselines B0/B1/B2
+make test      # uv run pytest (whole workspace)
 ```
 
 See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.

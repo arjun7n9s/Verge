@@ -2,15 +2,19 @@
 
 ## Dev setup
 
-Python 3.11+. The workspace runs from a checkout without install — a root
-`conftest.py` wires the in-repo packages onto `sys.path`.
+Python 3.11+ and [uv](https://docs.astral.sh/uv/). The recommended path installs
+the whole workspace editable into one venv:
 
 ```bash
-pip install pydantic pyyaml httpx "fastapi>=0.111" uvicorn pytest ruff
-pytest -q          # whole workspace (55+ tests)
-ruff check .       # lint
+make install       # uv sync + pnpm install
+uv run pytest      # whole workspace (55+ tests)
+uv run ruff check .
 make eval          # run the replay harness vs B0/B1/B2
 ```
+
+No-install fallback: a root `conftest.py` wires the in-repo packages onto
+`sys.path`, so a bare `pytest` (with pydantic/pyyaml/httpx/fastapi installed)
+also works.
 
 For the full stack: `make up` (docker compose) then `make api` + the console.
 

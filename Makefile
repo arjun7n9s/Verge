@@ -2,7 +2,11 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f deploy/docker-compose.yml --env-file deploy/.env
 
-.PHONY: help up down logs seed dev api console eval test lint fmt
+.PHONY: help install up down logs seed dev api console eval test lint fmt
+
+install: ## Set up the workspace (uv sync + pnpm install)
+	uv sync
+	pnpm install
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -18,25 +22,26 @@ logs: ## Tail infra logs
 	$(COMPOSE) logs -f --tail=100
 
 seed: ## (Re)generate the Vizag replay dataset
-	python eval/replays/vizag-2025-01/generate.py
+	uv run python eval/replays/vizag-2025-01/generate.py
 
 dev: ## Run api + console (dev)
 	$(MAKE) -j2 api console
 
 api: ## Run the FastAPI gateway
-	uvicorn verge_api.main:app --reload --port 8000 --app-dir services/api
+	uv run uvicorn verge_api.main:app --reload --port 8000
 
 console: ## Run the operator console (Vite)
 	pnpm --filter @verge/console dev
 
 eval: ## Run the replay harness vs baselines B0/B1/B2
-	python -m eval.harness --all
+	uv run verge replay --all
 
 test: ## Run the Python test suite
-	pytest -q
+	uv run pytest
 
-lint: ## Lint (ruff + tsc)
-	ruff check . && pnpm -r exec tsc --noEmit
+lint: ## Lint (ruff + console typecheck)
+	uv run ruff check .
+	pnpm --filter @verge/console typecheck
 
 fmt: ## Format (ruff format)
-	ruff format .
+	uv run ruff format .

@@ -4,6 +4,26 @@ version = "0.3.0"
 description = "The lead-time intelligence layer for zero-harm industrial operations."
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
+# Dev convenience: `uv sync` pulls the whole workspace + tooling into one venv.
+dependencies = [
+  "verge-schema",
+  "verge-audit",
+  "verge-llm",
+  "verge-risk-engine",
+  "verge-forecaster",
+  "verge-edge-gateway",
+  "verge-sims",
+  "verge-cli",
+  "verge-api",
+]
+
+[dependency-groups]
+# httpx powers starlette's TestClient and the OpenAICompatProvider live path.
+dev = ["pytest>=8", "ruff>=0.6", "httpx>=0.27"]
+
+# The root is a virtual workspace root (an aggregator), not an installable package.
+[tool.uv]
+package = false
 
 [tool.uv.workspace]
 members = [
@@ -17,6 +37,17 @@ members = [
   "sims",
   "cli",
 ]
+
+[tool.uv.sources]
+verge-schema = { workspace = true }
+verge-audit = { workspace = true }
+verge-llm = { workspace = true }
+verge-risk-engine = { workspace = true }
+verge-forecaster = { workspace = true }
+verge-edge-gateway = { workspace = true }
+verge-sims = { workspace = true }
+verge-cli = { workspace = true }
+verge-api = { workspace = true }
 
 [tool.ruff]
 line-length = 100
