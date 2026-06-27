@@ -1,0 +1,9 @@
+{
+  "name": "@verge/schema",
+  "version": "0.3.0",
+  "description": "Verge canonical data model — TypeScript types mirroring verge_schema (Python).",
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "Apache-2.0"
+}
