@@ -1,0 +1,14 @@
+{
+  "name": "verge",
+  "private": true,
+  "version": "0.3.0",
+  "description": "The lead-time intelligence layer for zero-harm industrial operations.",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=20", "pnpm": ">=9" },
+  "scripts": {
+    "dev": "pnpm --filter @verge/console dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r exec tsc --noEmit"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

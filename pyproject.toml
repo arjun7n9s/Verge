@@ -1,0 +1,35 @@
+[project]
+name = "verge"
+version = "0.3.0"
+description = "The lead-time intelligence layer for zero-harm industrial operations."
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+
+[tool.uv.workspace]
+members = [
+  "packages/schema",
+  "packages/audit",
+  "packages/llm",
+  "services/api",
+  "services/edge-gateway",
+  "services/risk-engine",
+  "services/forecaster",
+  "sims",
+  "cli",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["apps", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["packages", "services", "eval", "sims"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
