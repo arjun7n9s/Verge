@@ -68,8 +68,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("version").set_defaults(func=_cmd_version)
 
     p_replay = sub.add_parser("replay", help="run the eval harness")
-    p_replay.add_argument("--incident")
-    p_replay.add_argument("--all", action="store_true")
+    grp = p_replay.add_mutually_exclusive_group()  # --incident and --all are exclusive
+    grp.add_argument("--incident")
+    grp.add_argument("--all", action="store_true")
     p_replay.set_defaults(func=_cmd_replay)
 
     p_rules = sub.add_parser("rules", help="inspect the Safety Rules DSL library")

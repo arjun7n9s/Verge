@@ -49,6 +49,15 @@ def test_alert_is_multilingual_and_mentions_zone() -> None:
     assert all("B-04" in m for m in msgs.values())
 
 
+def test_alert_renders_band_value_not_enum_repr() -> None:
+    # Guards the use_enum_values contract: the band must format as "NEAR",
+    # never "LeadTimeBand.NEAR", in every language.
+    msgs = draft_messages(_finding(lead_time_band=LeadTimeBand.NEAR), "pause the permit")
+    for body in msgs.values():
+        assert "NEAR" in body
+        assert "LeadTimeBand" not in body
+
+
 def test_evidence_manifest_hash_is_order_independent() -> None:
     assert manifest_hash(["a", "b"]) == manifest_hash(["b", "a"])
     pack = build_evidence_pack(_finding(), created_at=AT)

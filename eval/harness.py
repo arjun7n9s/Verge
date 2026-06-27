@@ -76,16 +76,18 @@ def _in_changeover(t: datetime, changeovers, zone: str) -> bool:
     return any(s <= t <= e and z == zone for s, e, z in changeovers)
 
 
-def run_verge(gt, sensors, readings, permits, changeovers):
+def run_verge(gt, sensors, readings, permits, changeovers, *, window: int = WINDOW):
     """Tick through the timeline; return (first_alert_ts, band) for the target zone."""
     rules = load_rules(STARTER_RULES)
+    # TODO(per-sensor thresholds): thresholds is kind-keyed; if two sensors of the
+    # same kind in one zone have different calibrations, model per-sensor limits.
     thresholds = gt["thresholds"]
     zone = gt["zoneId"]
     ticks = sorted({r.ts for reads in readings.values() for r in reads})
 
     for tick in ticks:
         windowed = {
-            sid: [r for r in reads if r.ts <= tick][-WINDOW:] for sid, reads in readings.items()
+            sid: [r for r in reads if r.ts <= tick][-window:] for sid, reads in readings.items()
         }
         windowed = {sid: w for sid, w in windowed.items() if w}
         ctx = RiskContext(
@@ -108,10 +110,19 @@ def run_incident(incident: str) -> dict:
     breach = _dt(gt["breachTs"])
     thresholds = gt["thresholds"]
 
-    verge_ts, verge_band = run_verge(gt, sensors, readings, permits, changeovers)
+    # Per-replay config so a different plant/cadence can be replayed without code
+    # changes; values fall back to the defaults that match the 30s-cadence demos.
+    cfg = gt.get("config", {})
+    verge_ts, verge_band = run_verge(
+        gt, sensors, readings, permits, changeovers,
+        window=cfg.get("windowReadings", WINDOW),
+    )
     b0 = b0_fixed_threshold(readings, sensors, thresholds)
-    b1 = b1_rate_of_rise(readings, sensors, thresholds)
-    b2 = b2_multi_sensor_and_gate(readings, sensors, thresholds)
+    b1 = b1_rate_of_rise(readings, sensors, thresholds,
+                         rate_per_min=cfg.get("b1RatePerMin", 2.0))
+    b2 = b2_multi_sensor_and_gate(readings, sensors, thresholds,
+                                  n_required=cfg.get("b2NRequired", 2),
+                                  window_min=cfg.get("b2WindowMin", 5.0))
 
     # FPR from synthetic feedback (real feedback replaces this in Horizon 1)
     fpr = None
@@ -167,8 +178,9 @@ def render_markdown(results: list[dict]) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Verge replay harness")
-    ap.add_argument("--incident", help="replay id (default: --all)")
-    ap.add_argument("--all", action="store_true", help="run every replay under eval/replays/")
+    grp = ap.add_mutually_exclusive_group()  # --incident and --all are exclusive
+    grp.add_argument("--incident", help="replay id (default: --all)")
+    grp.add_argument("--all", action="store_true", help="run every replay under eval/replays/")
     args = ap.parse_args()
 
     if args.incident:
