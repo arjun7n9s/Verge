@@ -40,6 +40,7 @@ evidence — all able to run **inside an air-gapped plant network**.
 | `services/forecaster` | Rate-based lead-time **bands** |
 | `services/orchestrator` | Advisory response — alerts, evidence packs, report drafts (P8) |
 | `services/permit` | Digital permit-to-work + SIMOPS spatial-temporal conflict detection |
+| `services/twin` | Plant digital twin — zones, adjacency, per-sensor thresholds |
 | `services/api` | FastAPI gateway, SSE/WebSocket fan-out |
 | `apps/console` | Operator console (React + Vite + MapLibre/deck.gl) |
 | `eval` | Replay-provable eval harness + incident datasets |
@@ -59,13 +60,21 @@ make eval      # run the replay harness vs. baselines B0/B1/B2
 make test      # uv run pytest (whole workspace)
 ```
 
-**The live path** (sims → risk-engine → API → console), no broker needed:
+**The live path** (sims → risk-engine → API → console), no broker needed. The
+engine runs gas rules **and** SIMOPS permit conflicts, resolved against the
+plant model (twin):
 
 ```bash
-# stream a scenario through the engine; findings print as they fire
+# gas convergence — findings print as they fire
 uv run verge sim --scenario vizag-like | uv run python -m verge_risk
 
-# ...and feed them to the running console
+# SIMOPS — hot-work + confined-space in adjacent zones (compound, no single alarm)
+uv run verge sim --scenario simops-demo | uv run python -m verge_risk
+
+# shadow mode (§14.5): run alongside the existing alarm system, tag don't alert
+uv run verge sim --scenario vizag-like | uv run python -m verge_risk --shadow
+
+# ...and feed the live console (Live / Shadow toggle in the topbar)
 uv run verge sim --scenario vizag-like | uv run python -m verge_risk --post http://localhost:8000
 ```
 

@@ -22,8 +22,10 @@ Five planes (spec §2). Data flows up; the **safety core is LLM-independent** (P
 | §4.5 Finding lifecycle | `packages/schema/verge_schema/lifecycle.py` |
 | §4.6 Alert fatigue (feedback, FPR) | `services/api` store + `FindingFeedback` |
 | §4.7 Sensor-health plane | `services/risk-engine/verge_risk/health.py` |
+| §5 Pillar 3 — Plant digital twin | `services/twin/verge_twin/plant.py` |
 | §5 Pillar 4 — SIMOPS permit conflicts | `services/permit/verge_permit/conflicts.py` |
 | §6 Safety Rules DSL | `services/risk-engine/verge_risk/rules.py` + `rules/*.yaml` |
+| §14.5 Shadow mode | `RiskFinding.shadow` + `run_stream(shadow=)` + `/api/findings?shadow=` |
 | §10 Eval harness + baselines | `eval/harness.py`, `eval/baselines/` |
 | §10.6 Graceful degradation | LLM `degraded`, edge `StoreAndForward`, `/health` |
 | P6 Hash-chained audit | `packages/audit/verge_audit/chain.py` |
@@ -41,6 +43,15 @@ Five planes (spec §2). Data flows up; the **safety core is LLM-independent** (P
    another hash-chained `AuditEntry`.
 6. The eval harness replays all of the above and proves the lead-time edge vs.
    B0/B1/B2 — the same engine, no special-casing.
+
+## The live runtime (`run_stream`)
+
+The streaming runner composes detectors over one event stream: the gas rules
+(risk-engine) **plus** injected detectors like SIMOPS permit conflicts (permit),
+resolved against the plant model (twin) for thresholds and zone adjacency.
+risk-engine stays dependency-clean — composition happens in the CLI. Findings
+dedup by `(zone, lineage)` so gas and SIMOPS coexist; `shadow=True` tags them for
+the §14.5 review surface instead of surfacing live alerts.
 
 ## The one rule that shapes everything
 
