@@ -1,8 +1,9 @@
 # Verge — developer entrypoints
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f deploy/docker-compose.yml --env-file deploy/.env
+COMPOSE_APP := $(COMPOSE) --profile app
 
-.PHONY: help install up down logs seed dev api console eval test lint fmt demo-live ci
+.PHONY: help install up up-app down logs seed dev api console eval test lint fmt demo-live ci
 
 install: ## Set up the workspace (uv sync + pnpm install)
 	uv sync
@@ -14,6 +15,9 @@ help: ## Show this help
 
 up: ## Bring up infra (Redpanda, Postgres/PostGIS, Timescale, Neo4j, MinIO, Keycloak, Redis)
 	$(COMPOSE) up -d
+
+up-app: ## Infra + API + console (compose profile `app`, builds images)
+	$(COMPOSE_APP) up -d --build
 
 down: ## Tear down infra
 	$(COMPOSE) down

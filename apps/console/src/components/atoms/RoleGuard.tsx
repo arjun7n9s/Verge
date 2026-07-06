@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth';
+import { keycloakEnabled } from '@/lib/keycloak';
 import { ShieldAlert } from 'lucide-react';
 
 interface RoleGuardProps {
@@ -10,9 +11,9 @@ interface RoleGuardProps {
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const { user, isAuthenticated, setUser } = useAuthStore();
 
-  // Auto-seed a default Safety Engineer profile for local dev only.
+  // Auto-seed a default Safety Engineer profile for local dev only (no Keycloak).
   useEffect(() => {
-    if (import.meta.env.DEV && !isAuthenticated) {
+    if (import.meta.env.DEV && !keycloakEnabled && !isAuthenticated) {
       setUser({
         id: 'user-0411',
         name: 'Shift Supervisor Sarah',

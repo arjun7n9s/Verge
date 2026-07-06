@@ -17,10 +17,12 @@ dependencies = [
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
     "python-multipart>=0.0.9",
+    "pyjwt[crypto]>=2.9",
 ]
 
 [project.optional-dependencies]
 postgres = ["psycopg[binary]>=3.2"]
+object-store = ["minio>=7.2"]
 
 [build-system]
 requires = ["hatchling"]

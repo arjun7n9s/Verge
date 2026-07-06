@@ -267,8 +267,7 @@ tests/integration/test_memory_voice_path.py (new)
 
 #### D16 · Transcript persistence (optional)
 
-- [ ] SQL table or JSONL sink for voice handover transcripts (ask before `store*.py` changes)
-- [ ] `GET /api/voice/handover/recent?limit=20`
+- [x] `GET /api/voice/handover/recent?limit=20` — audit-backed (SQL durable when `VERGE_STORE=sql`)
 
 **Dex Phase 2 paths:** `packages/memory/**`, `services/voice/**`, new files under `routes/`, `test_memory*.py`, `test_voice*.py`, optional new package with root `pyproject` ping.
 
@@ -357,13 +356,19 @@ tests/integration/test_memory_voice_path.py (new)
 
 ### M7 · Infra (Arjun) — deploy env, make up
 
+- [x] API + console in compose (`make up-app`, profile `app`)
+- [x] `deploy/Dockerfile.api`, multi-stage console image
+- [x] Keycloak realm import (`deploy/keycloak/verge-realm.json`)
+- [x] Optional OIDC (`VERGE_AUTH_ENABLED`, console Keycloak provider)
+- [x] `GET /api/voice/handover/recent` (D16 — audit-backed)
+
 ---
 
 ## Agent queue (implementation priority)
 
 1. ~~M10 console Sprint B wiring~~ — done
-2. M7 deploy hardening (Arjun) — `make up`, API in compose (optional)
-3. Keycloak auth (later)
+2. ~~M7 deploy hardening~~ — done
+3. Keycloak auth in production pilot (enable `VERGE_AUTH_ENABLED` when ready)
 
 **Do not** take Dex Sprint B lanes — check `WORK.lock`.
 

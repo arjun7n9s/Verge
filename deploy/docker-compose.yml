@@ -90,6 +90,56 @@ services:
     volumes:
       - ./keycloak/verge-realm.json:/opt/keycloak/data/import/verge-realm.json:ro
 
+  # Application tier — enable with `make up-app` (compose profile `app`).
+  verge-api:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      VERGE_STORE: sql
+      VERGE_DB_URL: postgresql+psycopg://${POSTGRES_USER:-verge}:${POSTGRES_PASSWORD:-verge}@postgres:5432/${POSTGRES_DB:-verge}
+      REDPANDA_BROKERS: redpanda:9092
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-verge}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-vergeverge}
+      MINIO_USE_SSL: "false"
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-verge}
+      VERGE_AUTH_ENABLED: ${VERGE_AUTH_ENABLED:-false}
+      VERGE_COGNEE_ENABLED: ${VERGE_COGNEE_ENABLED:-false}
+      AIMLAPI_API_KEY: ${AIMLAPI_API_KEY:-}
+      SPEECHMATICS_API_KEY: ${SPEECHMATICS_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  verge-console:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: apps/console/Dockerfile
+      args:
+        VITE_KEYCLOAK_URL: ${KEYCLOAK_URL:-http://localhost:8080}
+        VITE_KEYCLOAK_REALM: ${KEYCLOAK_REALM:-verge}
+        VITE_KEYCLOAK_CLIENT_ID: verge-console
+    ports:
+      - "8088:80"
+    depends_on:
+      verge-api:
+        condition: service_healthy
+
 volumes:
   pgdata:
   tsdata:

@@ -1,0 +1,15 @@
+.git
+.github
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.db
+.env
+deploy/.env
+node_modules
+apps/console/dist
+apps/console/node_modules
+eval/replays/*/events.jsonl
+eval/replays/*/ground-truth.json
+*.md
+!packages/**/README.md

@@ -6,10 +6,27 @@ egress.
 
 ```bash
 cp .env.example .env      # from repo root; or edit deploy/.env
-make up                   # docker compose up -d
+make up                   # infra only (docker compose up -d)
+make up-app               # infra + API + console (builds images)
 make logs                 # tail
 make down
 ```
+
+### Full stack (M7)
+
+`make up-app` starts everything including:
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| verge-api | 8000 | FastAPI gateway (SQL store → Postgres) |
+| verge-console | 8088 | Operator console (nginx → API proxy) |
+| Keycloak | 8080 | OIDC (`verge` realm, user `sarah` / `verge`) |
+
+Pilot login (Keycloak dev import): **sarah** / **verge** with role `Safety_Engineer`.
+
+To enable OIDC on the API, set `VERGE_AUTH_ENABLED=true` in `deploy/.env` and
+rebuild/restart `verge-api`. The console picks up Keycloak when built with
+`VITE_KEYCLOAK_URL` (set automatically in compose for `verge-console`).
 
 ### Durable API mode (M9)
 
@@ -48,3 +65,5 @@ uv run python -m verge_edge.gateway --mqtt localhost --post-api http://localhost
 Timescale hypertable + 1-minute continuous aggregate. The `audit_entry` table is
 append-only by convention (P6) — application code never issues UPDATE/DELETE
 against it.
+
+`deploy/keycloak/verge-realm.json` is imported on first Keycloak start.

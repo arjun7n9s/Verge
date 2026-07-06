@@ -29,6 +29,21 @@ def test_voice_handover_appends_audit_even_when_degraded() -> None:
     assert after[-1]["kind"] == "voice-handover"
 
 
+def test_voice_handover_recent_lists_audit_entries() -> None:
+    client.post(
+        "/api/voice/handover",
+        data={"actor": "maya"},
+        files={"file": ("handover.wav", b"audio", "audio/wav")},
+    )
+    r = client.get("/api/voice/handover/recent?limit=5")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    assert len(body) >= 1
+    assert body[0]["actor"] == "maya"
+    assert "transcript" in body[0]
+
+
 def test_voice_near_miss_appends_audit_even_when_degraded() -> None:
     before = len(client.get("/api/audit?limit=999").json())
     r = client.post(

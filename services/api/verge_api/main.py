@@ -25,6 +25,7 @@ from verge_schema.lifecycle import IllegalTransition
 from verge_twin import load_plant
 from verge_twin.plant import DEMO_PLANT
 
+from .auth import AuthMiddleware
 from .evidence_store import upload_evidence_manifest
 from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
@@ -43,6 +44,7 @@ app = FastAPI(title="Verge API", version="0.3.0")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+app.add_middleware(AuthMiddleware)
 app.include_router(fleet_router, prefix="/api")
 app.include_router(evidence_router, prefix="/api")
 app.include_router(plant_router, prefix="/api")

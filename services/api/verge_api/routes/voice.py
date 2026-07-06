@@ -57,6 +57,29 @@ async def voice_handover(
     return body
 
 
+@router.get("/voice/handover/recent")
+def voice_handover_recent(request: Request, limit: int = 20) -> list[dict]:
+    """Recent shift handover transcripts (from durable audit log)."""
+    cap = max(1, min(limit, 100))
+    entries = request.app.state.store.audit_entries(limit=500)
+    handovers = [e for e in entries if e.get("kind") == "voice-handover"]
+    out: list[dict] = []
+    for entry in handovers[-cap:]:
+        payload = entry.get("payload") or {}
+        out.append(
+            {
+                "entryId": entry.get("entryId"),
+                "timestamp": entry.get("timestamp"),
+                "actor": entry.get("actor") or payload.get("actor"),
+                "transcript": payload.get("transcript", ""),
+                "structured": payload.get("structured"),
+                "degraded": payload.get("degraded", False),
+                "provider": payload.get("provider"),
+            }
+        )
+    return list(reversed(out))
+
+
 @router.post("/voice/near-miss")
 async def voice_near_miss(
     request: Request,
