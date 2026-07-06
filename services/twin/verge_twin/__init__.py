@@ -8,6 +8,7 @@ from .plant import (
     ZoneNode,
     load_plant,
 )
+from .export import demo_geojson, geojson_for_plant
 
 __all__ = [
     "DEMO_PLANT",
@@ -15,6 +16,8 @@ __all__ = [
     "PlantModel",
     "SensorNode",
     "ZoneNode",
+    "demo_geojson",
+    "geojson_for_plant",
     "load_plant",
 ]
 __version__ = "0.3.0"

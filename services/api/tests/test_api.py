@@ -6,6 +6,18 @@ from verge_api.main import app
 client = TestClient(app)
 
 
+def test_plant_geojson_serves_demo_layout() -> None:
+    r = client.get("/api/plant/geojson")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["type"] == "FeatureCollection"
+    assert body["properties"]["plant"] == "vizag-coke-oven"
+    assert len(body["features"]) == 5
+    assert len(body["sensors"]) >= 3
+    zone_ids = {f["properties"]["zoneId"] for f in body["features"]}
+    assert "B-04" in zone_ids
+
+
 def test_health_reports_audit_and_llm() -> None:
     r = client.get("/health")
     assert r.status_code == 200

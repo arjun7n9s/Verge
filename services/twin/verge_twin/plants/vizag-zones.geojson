@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "zoneId": "B-01", "name": "Coke-oven battery 1" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[83.218, 17.688], [83.222, 17.688], [83.222, 17.692], [83.218, 17.692], [83.218, 17.688]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "zoneId": "B-02", "name": "Coke-oven battery 2" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[83.222, 17.688], [83.226, 17.688], [83.226, 17.692], [83.222, 17.692], [83.222, 17.688]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "zoneId": "B-03", "name": "Coke-oven battery 3" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[83.226, 17.688], [83.230, 17.688], [83.230, 17.692], [83.226, 17.692], [83.226, 17.688]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "zoneId": "B-04", "name": "Coke-oven battery 4" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[83.230, 17.688], [83.234, 17.688], [83.234, 17.692], [83.230, 17.692], [83.230, 17.688]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "zoneId": "B-05", "name": "Coke-oven battery 5" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[83.234, 17.688], [83.238, 17.688], [83.238, 17.692], [83.234, 17.692], [83.234, 17.688]]]
+      }
+    }
+  ]
+}

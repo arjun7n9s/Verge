@@ -27,3 +27,14 @@ def test_thresholds_by_kind_and_by_sensor() -> None:
 def test_sensors_in_zone() -> None:
     p = load_plant()
     assert {s.sensor_id for s in p.sensors_in_zone("B-04")} == {"LEL-04", "CO-04"}
+
+
+def test_demo_geojson_merges_zones_and_sensors() -> None:
+    from verge_twin.export import demo_geojson
+
+    doc = demo_geojson()
+    assert doc["properties"]["plant"] == "vizag-coke-oven"
+    assert len(doc["features"]) == 5
+    b04 = next(f for f in doc["features"] if f["properties"]["zoneId"] == "B-04")
+    assert "B-05" in b04["properties"]["adjacent"]
+    assert any(s["sensorId"] == "LEL-04" for s in doc["sensors"])

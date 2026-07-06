@@ -24,12 +24,14 @@ from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
 
 from .factory import make_store
+from .routes.plant import router as plant_router
 from .seed import seed
 
 app = FastAPI(title="Verge API", version="0.3.0")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+app.include_router(plant_router, prefix="/api")
 
 # Backend from VERGE_STORE (memory default; sql persists). Seed only when empty
 # so a durable store keeps its history across restarts.
