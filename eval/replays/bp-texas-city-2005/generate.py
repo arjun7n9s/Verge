@@ -64,6 +64,7 @@ def build_ground_truth() -> dict:
         "title": "BP Texas City raffinate splitter explosion (reconstructed)",
         "zoneId": "RS-T",
         "breachTs": _iso(BREACH),
+        "plantModel": "services/twin/verge_twin/plants/bp-texas-raffinate.yaml",
         "thresholdSensor": "LEL-RS",
         "thresholds": {"gas-lel": LEL_THRESHOLD, "gas-co": CO_THRESHOLD},
         "expectedConvergence": ["hot-work permit", "rising flammable gas"],

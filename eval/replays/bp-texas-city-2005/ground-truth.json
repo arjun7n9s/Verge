@@ -3,6 +3,7 @@
   "title": "BP Texas City raffinate splitter explosion (reconstructed)",
   "zoneId": "RS-T",
   "breachTs": "2005-03-23T12:38:00+00:00",
+  "plantModel": "services/twin/verge_twin/plants/bp-texas-raffinate.yaml",
   "thresholdSensor": "LEL-RS",
   "thresholds": {
     "gas-lel": 100.0,

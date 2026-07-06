@@ -54,6 +54,7 @@ def build_ground_truth() -> dict:
         "title": "Jaipur IOC tank-farm fire (reconstructed)",
         "zoneId": "TF-A",
         "breachTs": _iso(BREACH),
+        "plantModel": "services/twin/verge_twin/plants/jaipur-tank-farm.yaml",
         "thresholdSensor": "LEL-TF",
         "thresholds": {"gas-lel": LEL_THRESHOLD},
         "expectedConvergence": ["hot-work permit", "rising flammable gas"],

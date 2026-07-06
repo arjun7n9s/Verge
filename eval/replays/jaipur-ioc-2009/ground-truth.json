@@ -3,6 +3,7 @@
   "title": "Jaipur IOC tank-farm fire (reconstructed)",
   "zoneId": "TF-A",
   "breachTs": "2009-10-29T18:33:00+00:00",
+  "plantModel": "services/twin/verge_twin/plants/jaipur-tank-farm.yaml",
   "thresholdSensor": "LEL-TF",
   "thresholds": {
     "gas-lel": 100.0
