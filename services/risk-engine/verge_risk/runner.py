@@ -97,6 +97,7 @@ def run_stream(
     detectors: list[Detector] | None = None,
     shadow: bool = False,
     min_confidence: float = 0.8,
+    window: int = WINDOW,
 ) -> int:
     """Drive the engine over a live stream. Runs the gas rules plus any injected
     detectors (e.g. SIMOPS), emits each qualifying finding once (deduped by zone
@@ -105,7 +106,7 @@ def run_stream(
     from .engine import evaluate  # local import avoids a cycle at module load
 
     detectors = detectors or []
-    state = StreamState(thresholds)
+    state = StreamState(thresholds, window=window)
     seen: set[tuple[str, tuple[str, ...]]] = set()
     emitted = 0
     for e in events:
