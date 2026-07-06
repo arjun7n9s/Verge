@@ -19,5 +19,7 @@ export type {
   RegulatoryClause,
   PlantHistoryEntry,
 } from './memory';
+export { submitVoiceHandover, transcribeVoice, textToHandoverWav } from './voice';
+export type { VoiceResult, VoiceStructured } from './voice';
 export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';

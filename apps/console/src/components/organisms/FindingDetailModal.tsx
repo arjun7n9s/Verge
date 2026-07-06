@@ -4,6 +4,7 @@ import { Modal, Button, Badge } from '@/components/atoms';
 import { transitionFinding } from '@/api';
 import { TemporalConvergenceChart } from './TemporalConvergenceChart';
 import { ExportEvidenceButton } from '@/components/molecules/ExportEvidenceButton';
+import { FindingAuditTab } from '@/components/molecules/FindingAuditTab';
 import {
   FileText,
   ShieldCheck,
@@ -92,7 +93,12 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
                 onClick={async () => {
                   try {
                     // Update state to live (shadow = false) and notify
-                    await transitionFinding(finding.findingId, 'acknowledged', 'Promoted shadow finding to live alert');
+                    await transitionFinding(
+                      finding.findingId,
+                      'acknowledged',
+                      'Promoted shadow finding to live alert',
+                      'shadow-promote',
+                    );
                     onSuccess();
                     onClose();
                   } catch (err) {
@@ -193,26 +199,7 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
               </div>
             )}
 
-            {activeTab === 'audit' && (
-              <div className="flex flex-col gap-2 font-mono text-xs">
-                <div className="p-3 border border-line bg-panel-2/30 rounded flex flex-col gap-1">
-                  <div className="flex justify-between text-ink-dim">
-                    <span className="font-bold text-ok">GENESIS HASH VERIFIED</span>
-                    <span className="text-micro">{finding.createdAt}</span>
-                  </div>
-                  <div className="text-micro mt-1 truncate">HASH: 4b29c9183d8a9e7019f2a0b12c88de13...</div>
-                  <div className="text-micro text-ink-dim">PREV: 00000000000000000000000000000000...</div>
-                </div>
-                <div className="p-3 border border-line bg-panel-2/30 rounded flex flex-col gap-1">
-                  <div className="flex justify-between text-ink-dim">
-                    <span className="font-bold text-ok">OPERATOR STATE CHANGE VERIFIED</span>
-                    <span className="text-micro">{new Date().toISOString()}</span>
-                  </div>
-                  <div className="text-micro mt-1 truncate">HASH: sha256-a189fcf2b01cc28f7311d9f...</div>
-                  <div className="text-micro text-ink-dim">PREV: 4b29c9183d8a9e7019f2a0b12c88de13...</div>
-                </div>
-              </div>
-            )}
+            {activeTab === 'audit' && <FindingAuditTab findingId={finding.findingId} />}
           </div>
         </div>
       </div>

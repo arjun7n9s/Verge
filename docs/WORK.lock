@@ -1,2 +1,1 @@
 # path | owner | task | until (optional)
-apps/console/src | agent | KnowledgePanel context wire | session
