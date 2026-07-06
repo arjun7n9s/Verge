@@ -1,8 +1,3 @@
 # path | owner | task | until (optional)
-eval/harness.py eval/runtime.py | agent | M2 eval runtime parity | session
-services/risk-engine/verge_risk/runner.py | agent | window kwarg | session
-services/twin/verge_twin/export.py | agent | M5 geojson | session
-services/api/verge_api/routes/plant.py | agent | plant geojson API | session
-services/api/verge_api/main.py | agent | include plant router | session
-services/risk-engine/verge_risk/rules/starter.yaml | agent | M3 rules expand | session
-docs/progress.md | Dex | orientation log | 2026-07-06 22:30
+# Delete your line when done. One line per active edit zone.
+# Shared files (main.py, pyproject.toml, schema) MUST be listed here before editing.
