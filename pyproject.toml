@@ -9,6 +9,8 @@ dependencies = [
   "verge-schema",
   "verge-audit",
   "verge-llm",
+  "verge-memory",
+  "verge-voice",
   "verge-risk-engine",
   "verge-forecaster",
   "verge-edge-gateway",
@@ -37,7 +39,9 @@ members = [
   "packages/schema",
   "packages/audit",
   "packages/llm",
+  "packages/memory",
   "services/api",
+  "services/voice",
   "services/edge-gateway",
   "services/risk-engine",
   "services/forecaster",
@@ -52,6 +56,8 @@ members = [
 verge-schema = { workspace = true }
 verge-audit = { workspace = true }
 verge-llm = { workspace = true }
+verge-memory = { workspace = true }
+verge-voice = { workspace = true }
 verge-risk-engine = { workspace = true }
 verge-forecaster = { workspace = true }
 verge-edge-gateway = { workspace = true }

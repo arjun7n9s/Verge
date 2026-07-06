@@ -111,30 +111,30 @@ Check boxes here when done; Arjun commits after review.
 
 #### D1 · Scaffold `packages/memory` (Cognee Cloud)
 
-- [ ] Create `packages/memory/` + `pyproject.toml` (ping before editing root `pyproject.toml`).
-- [ ] `verge_memory/client.py` — Cognee Cloud HTTP client (`COGNEE_*`, `VERGE_SITE_ID` env).
-- [ ] `verge_memory/datasets.py` — dataset name `{COGNEE_DATASET_PREFIX}-{VERGE_SITE_ID}`.
-- [ ] `verge_memory/ingest.py` — `ingest_closed_finding(...)`, `ingest_document(...)`.
-- [ ] `verge_memory/retrieve.py` — `context_for_finding(finding)` → similar incidents, clauses, plant history, `degraded`.
-- [ ] Unit tests with mocked HTTP — **no real network in CI**.
+- [x] Create `packages/memory/` + `pyproject.toml` (ping before editing root `pyproject.toml`).
+- [x] `verge_memory/client.py` — Cognee Cloud HTTP client (`COGNEE_*`, `VERGE_SITE_ID` env).
+- [x] `verge_memory/datasets.py` — dataset name `{COGNEE_DATASET_PREFIX}-{VERGE_SITE_ID}`.
+- [x] `verge_memory/ingest.py` — `ingest_closed_finding(...)`, `ingest_document(...)`.
+- [x] `verge_memory/retrieve.py` — `context_for_finding(finding)` → similar incidents, clauses, plant history, `degraded`.
+- [x] Unit tests with mocked HTTP — **no real network in CI**.
 
 ---
 
 #### D2 · Seed corpus (static)
 
-- [ ] `packages/memory/verge_memory/corpus/vizag-2025-summary.md`
-- [ ] `packages/memory/verge_memory/corpus/oisd-stubs.json` (5–10 clauses)
-- [ ] Idempotent ingest on first retrieve
-- [ ] `packages/memory/README.md`
+- [x] `packages/memory/verge_memory/corpus/vizag-2025-summary.md`
+- [x] `packages/memory/verge_memory/corpus/oisd-stubs.json` (5–10 clauses)
+- [x] Idempotent ingest on first retrieve
+- [x] `packages/memory/README.md`
 
 ---
 
 #### D3 · API route — memory
 
-- [ ] `services/api/verge_api/routes/memory.py`
-- [ ] `GET /api/findings/{finding_id}/context`
-- [ ] Register router in `main.py` (lock file first)
-- [ ] `services/api/tests/test_memory_routes.py`
+- [x] `services/api/verge_api/routes/memory.py`
+- [x] `GET /api/findings/{finding_id}/context`
+- [x] Register router in `main.py` (lock file first)
+- [x] `services/api/tests/test_memory_routes.py`
 
 Stable response shape:
 
@@ -152,10 +152,10 @@ Stable response shape:
 
 #### D4 · Scaffold `services/voice` (Speechmatics)
 
-- [ ] `services/voice/verge_voice/transcribe.py`
-- [ ] Env: `SPEECHMATICS_*`
-- [ ] Return transcript + `structured` + `degraded`; optional one-line aimlapi summary only
-- [ ] Mocked tests
+- [x] `services/voice/verge_voice/transcribe.py`
+- [x] Env: `SPEECHMATICS_*`
+- [x] Return transcript + `structured` + `degraded`; optional one-line aimlapi summary only
+- [x] Mocked tests
 
 ---
 
@@ -163,10 +163,10 @@ Stable response shape:
 
 #### D5 · API routes — voice
 
-- [ ] `services/api/verge_api/routes/voice.py`
-- [ ] `POST /api/voice/transcribe`
-- [ ] `POST /api/voice/handover` (+ audit append via store — ask if you need a helper)
-- [ ] `services/api/tests/test_voice_routes.py`
+- [x] `services/api/verge_api/routes/voice.py`
+- [x] `POST /api/voice/transcribe`
+- [x] `POST /api/voice/handover` (+ audit append via store — ask if you need a helper)
+- [x] `services/api/tests/test_voice_routes.py`
 
 ---
 
@@ -184,8 +184,8 @@ Stable response shape:
 
 #### D8 · Handoff notes
 
-- [ ] READMEs + curl examples in package READMEs
-- [ ] Update **Dex demo** section below when D3+D5 work
+- [x] READMEs + curl examples in package READMEs
+- [x] Update **Dex demo** section below when D3+D5 work
 
 ---
 
@@ -293,8 +293,11 @@ Stable response shape:
 # Memory context (API must be running: make dev or uvicorn)
 curl http://localhost:8000/api/findings/F-CONV-07/context
 
-# Voice transcribe (example — adjust when route exists)
-# curl -F "file=@handover.wav" http://localhost:8000/api/voice/transcribe
+# Voice transcribe
+curl -F "file=@handover.wav" http://localhost:8000/api/voice/transcribe
+
+# Voice handover → audit entry
+curl -F "file=@handover.wav" -F "actor=maya" http://localhost:8000/api/voice/handover
 ```
 
 ---

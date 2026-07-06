@@ -7,11 +7,14 @@ dependencies = [
     "verge-schema",
     "verge-audit",
     "verge-llm",
+    "verge-memory",
+    "verge-voice",
     "verge-risk-engine",
     "verge-orchestrator",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -28,5 +31,7 @@ packages = ["verge_api"]
 verge-schema = { workspace = true }
 verge-audit = { workspace = true }
 verge-llm = { workspace = true }
+verge-memory = { workspace = true }
+verge-voice = { workspace = true }
 verge-risk-engine = { workspace = true }
 verge-orchestrator = { workspace = true }

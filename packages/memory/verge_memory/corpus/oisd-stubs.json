@@ -1,0 +1,27 @@
+[
+  {
+    "id": "OISD-STUB-HOT-WORK-01",
+    "title": "Hot work near hydrocarbon or gas hazard",
+    "excerpt": "Hot-work controls should account for nearby flammable gas readings, isolation status, and active permits before work proceeds."
+  },
+  {
+    "id": "OISD-STUB-CONFINED-SPACE-01",
+    "title": "Confined-space entry atmospheric checks",
+    "excerpt": "Confined-space work requires atmospheric monitoring and escalation when toxic or flammable readings trend toward alarm thresholds."
+  },
+  {
+    "id": "OISD-STUB-SIMOPS-01",
+    "title": "Simultaneous operations review",
+    "excerpt": "Concurrent permits in the same or adjacent zones should be reviewed for spatial and temporal conflict before execution."
+  },
+  {
+    "id": "OISD-STUB-HANDOVER-01",
+    "title": "Shift handover risk continuity",
+    "excerpt": "Open hazards and active permits should be explicitly carried across shift handover to avoid loss of situational awareness."
+  },
+  {
+    "id": "OISD-STUB-EVIDENCE-01",
+    "title": "Incident evidence preservation",
+    "excerpt": "Safety events should preserve source readings, permit identifiers, timestamps, and operator actions for later review."
+  }
+]

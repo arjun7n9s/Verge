@@ -24,7 +24,9 @@ from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
 
 from .factory import make_store
+from .routes.memory import router as memory_router
 from .routes.plant import router as plant_router
+from .routes.voice import router as voice_router
 from .seed import seed
 
 app = FastAPI(title="Verge API", version="0.3.0")
@@ -32,10 +34,13 @@ app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 app.include_router(plant_router, prefix="/api")
+app.include_router(memory_router, prefix="/api")
+app.include_router(voice_router, prefix="/api")
 
 # Backend from VERGE_STORE (memory default; sql persists). Seed only when empty
 # so a durable store keeps its history across restarts.
 store = make_store()
+app.state.store = store
 if not store.list_findings(shadow=None):
     seed(store)
 llm = provider_from_env()
