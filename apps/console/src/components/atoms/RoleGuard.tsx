@@ -10,9 +10,9 @@ interface RoleGuardProps {
 export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   const { user, isAuthenticated, setUser } = useAuthStore();
 
-  // Auto-seed a default Safety Engineer profile if not authenticated for local dev ease
+  // Auto-seed a default Safety Engineer profile for local dev only.
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (import.meta.env.DEV && !isAuthenticated) {
       setUser({
         id: 'user-0411',
         name: 'Shift Supervisor Sarah',

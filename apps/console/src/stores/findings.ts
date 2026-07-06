@@ -48,8 +48,6 @@ export const useFindingsStore = create<FindingsState>((set) => ({
 
 import { useShallow } from 'zustand/react/shallow';
 
-// ... (rest remains unchanged)
-
 export function useFilteredFindings(): RiskFinding[] {
   return useFindingsStore(useShallow((state) => {
     let result = state.findings;

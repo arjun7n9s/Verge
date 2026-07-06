@@ -131,7 +131,7 @@ i18n
     lng: 'en',
     fallbackLng: 'en',
     interpolation: {
-      escapeValue: false, // react already safes from xss
+      escapeValue: false, // React already saves from XSS
     },
   });
 

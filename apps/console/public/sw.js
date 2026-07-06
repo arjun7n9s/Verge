@@ -36,13 +36,23 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Handle SPA navigation requests with /index.html app shell fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.match('/index.html').then((cachedResponse) => {
+        return cachedResponse || fetch(event.request);
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).catch(() => {
-        // Fallback for API or page fetches when offline
+        // Fallback for API or data fetches when offline
         return new Response(
           JSON.stringify({ error: 'Offline - service unavailable' }),
           { status: 503, headers: { 'Content-Type': 'application/json' } }

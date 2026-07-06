@@ -8,10 +8,12 @@ import { defineConfig } from "vite";
 // from spamming ECONNREFUSED connection traces to the terminal.
 let isBackendUp = false;
 try {
-  const output = execSync("netstat -ano", { encoding: "utf8" });
-  isBackendUp = output.includes(":8000 ");
+  const cmd = process.platform === "win32" ? "netstat -ano" : "netstat -an";
+  const output = execSync(cmd, { encoding: "utf8" });
+  isBackendUp = /:8000\b/.test(output);
 } catch {
-  // Fallback to false if command fails
+  // If detection fails, assume backend is up so proxying still works cross-platform
+  isBackendUp = true;
 }
 
 export default defineConfig({
