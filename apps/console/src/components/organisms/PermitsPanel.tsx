@@ -1,74 +1,49 @@
-import { useState, useMemo } from 'react';
-import { Card, Badge, Button } from '@/components/atoms';
-import { AlertTriangle, Check, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Card, Badge } from '@/components/atoms';
+import { AlertTriangle, AlertCircle } from 'lucide-react';
+import { getPermits, getPermitConflicts, type PermitWire, type PermitConflict } from '@/api/permits';
 
-export interface Permit {
-  permitId: string;
-  title: string;
-  zoneId: string;
-  workType: string;
-  workers: string[];
-  startTime: string;
-  endTime: string;
-  status: 'requested' | 'approved' | 'active' | 'suspended' | 'closed';
+interface PermitRow extends PermitWire {
   hasConflict: boolean;
   conflictDescription?: string;
 }
 
-const MOCK_PERMITS: Permit[] = [
-  {
-    permitId: 'PTW-4091',
-    title: 'Hot Work - Welding on Reformer line',
-    zoneId: 'Zone 4 (Primary Reformer)',
-    workType: 'Hot Work',
-    workers: ['J. Doe', 'A. Singh'],
-    startTime: '2026-07-05T08:00:00Z',
-    endTime: '2026-07-05T16:00:00Z',
-    status: 'active',
-    hasConflict: true,
-    conflictDescription: 'SIMOPS Conflict: Confined space entry work in adjacent Reformer feed line.',
-  },
-  {
-    permitId: 'PTW-1102',
-    title: 'Confined Space - Vessel Inspection',
-    zoneId: 'Zone 12 (Confined Compressor)',
-    workType: 'Confined Space',
-    workers: ['R. Kumar'],
-    startTime: '2026-07-05T10:00:00Z',
-    endTime: '2026-07-05T12:00:00Z',
-    status: 'active',
-    hasConflict: false,
-  },
-  {
-    permitId: 'PTW-9912',
-    title: 'Cold Work - Valve replacement dikes',
-    zoneId: 'Zone 2 (Storage Dikes)',
-    workType: 'Cold Work',
-    workers: ['P. Smith'],
-    startTime: '2026-07-05T09:00:00Z',
-    endTime: '2026-07-05T17:00:00Z',
-    status: 'active',
-    hasConflict: false,
-  },
-  {
-    permitId: 'PTW-2810',
-    title: 'Electrical - Substation Maintenance',
-    zoneId: 'Zone 8 (Sulfur Recovery)',
-    workType: 'Electrical Isolation',
-    workers: ['T. Johnson', 'S. Ali'],
-    startTime: '2026-07-05T14:00:00Z',
-    endTime: '2026-07-05T18:00:00Z',
-    status: 'requested',
-    hasConflict: true,
-    conflictDescription: 'SIMOPS Conflict: Live power isolation scheduled during active steam blowdown.',
-  },
-];
+function enrichPermits(permits: PermitWire[], conflicts: PermitConflict[]): PermitRow[] {
+  const conflictByPermit = new Map<string, string>();
+  for (const c of conflicts) {
+    const msg = `${c.reason} (${c.permitA} ↔ ${c.permitB})`;
+    conflictByPermit.set(c.permitA, msg);
+    conflictByPermit.set(c.permitB, msg);
+  }
+  return permits.map((p) => ({
+    ...p,
+    hasConflict: conflictByPermit.has(p.permitId),
+    conflictDescription: conflictByPermit.get(p.permitId),
+  }));
+}
 
 export function PermitsPanel() {
-  const [permits, setPermits] = useState<Permit[]>(MOCK_PERMITS);
+  const [permits, setPermits] = useState<PermitRow[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterConflict, setFilterConflict] = useState<boolean | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const [active, conflictBody] = await Promise.all([getPermits(), getPermitConflicts()]);
+      setPermits(enrichPermits(active, conflictBody.conflicts));
+      setLoadError(null);
+    } catch {
+      setPermits([]);
+      setLoadError('Permits unavailable — start API with `make dev`.');
+    }
+  };
+
+  useEffect(() => {
+    void load();
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const filteredPermits = useMemo(() => {
     return permits.filter((p) => {
@@ -78,71 +53,41 @@ export function PermitsPanel() {
     });
   }, [permits, filterConflict, filterStatus]);
 
-  const handleApprove = async (permitId: string) => {
-    setIsSubmitting(permitId);
-    try {
-      // Simulate state update to active on supervisor approval
-      setPermits((prev) =>
-        prev.map((p) => (p.permitId === permitId ? { ...p, status: 'active' } : p))
-      );
-    } finally {
-      setIsSubmitting(null);
-    }
-  };
-
-  const handleReject = async (permitId: string) => {
-    setIsSubmitting(permitId);
-    try {
-      setPermits((prev) =>
-        prev.map((p) => (p.permitId === permitId ? { ...p, status: 'closed' } : p))
-      );
-    } finally {
-      setIsSubmitting(null);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-4 text-ink h-full select-none">
-      {/* Header with Filters row */}
+      {loadError && (
+        <div className="bg-imminent/10 border border-imminent/20 text-imminent text-xs p-2 rounded flex items-center gap-2 shrink-0">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {loadError}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3 select-none">
         <div className="flex items-center gap-1.5 bg-panel-2 p-0.5 rounded border border-line">
-          <span className="text-micro font-mono text-ink-dim px-2 uppercase font-bold">
-            CONFLICT:
-          </span>
-          <button
-            onClick={() => setFilterConflict(null)}
-            className={`h-6 px-2 text-micro font-mono font-bold rounded-sm cursor-pointer ${
-              filterConflict === null
-                ? 'bg-panel text-ink border border-line'
-                : 'text-ink-dim hover:text-ink'
-            }`}
-          >
-            ALL
-          </button>
-          <button
-            onClick={() => setFilterConflict(true)}
-            className={`h-6 px-2 text-micro font-mono font-bold rounded-sm cursor-pointer ${
-              filterConflict === true
-                ? 'bg-imminent/10 border-imminent/30 text-imminent'
-                : 'text-ink-dim hover:text-imminent'
-            }`}
-          >
-            CONFLICTS
-          </button>
+          <span className="text-micro font-mono text-ink-dim px-2 uppercase font-bold">CONFLICT:</span>
+          {([null, true] as const).map((value) => (
+            <button
+              key={String(value)}
+              onClick={() => setFilterConflict(value)}
+              className={`h-6 px-2 text-micro font-mono font-bold rounded-sm cursor-pointer ${
+                filterConflict === value
+                  ? value ? 'bg-imminent/10 border-imminent/30 text-imminent' : 'bg-panel text-ink border border-line'
+                  : 'text-ink-dim hover:text-ink'
+              }`}
+            >
+              {value === null ? 'ALL' : 'CONFLICTS'}
+            </button>
+          ))}
         </div>
 
         <div className="flex items-center gap-1.5 bg-panel-2 p-0.5 rounded border border-line">
-          <span className="text-micro font-mono text-ink-dim px-2 uppercase font-bold">
-            STATUS:
-          </span>
-          {['all', 'active', 'requested', 'closed'].map((status) => (
+          <span className="text-micro font-mono text-ink-dim px-2 uppercase font-bold">STATUS:</span>
+          {['all', 'open', 'closed'].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}
               className={`h-6 px-2 text-micro font-mono font-bold rounded-sm cursor-pointer uppercase ${
-                filterStatus === status
-                  ? 'bg-panel text-ink border border-line'
-                  : 'text-ink-dim hover:text-ink'
+                filterStatus === status ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink'
               }`}
             >
               {status}
@@ -151,16 +96,14 @@ export function PermitsPanel() {
         </div>
       </div>
 
-      {/* Permits Grid Scroll Container */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-3 scrollbar pr-1">
         {filteredPermits.map((permit) => (
           <Card
             key={permit.permitId}
             className={`flex flex-col gap-3 relative p-3 border ${
-              permit.hasConflict && permit.status !== 'closed' ? 'border-imminent/30 bg-imminent/5' : 'border-line bg-panel-2/30'
+              permit.hasConflict ? 'border-imminent/30 bg-imminent/5' : 'border-line bg-panel-2/30'
             }`}
           >
-            {/* Header row */}
             <div className="flex justify-between items-center text-xs select-none">
               <div className="flex items-center gap-2">
                 <Badge variant="generic" color="ok" className="font-mono text-micro font-bold py-0.5">
@@ -168,67 +111,28 @@ export function PermitsPanel() {
                 </Badge>
                 <span className="text-ink font-semibold">{permit.zoneId}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-micro font-mono text-ink-dim uppercase">[{permit.workType}]</span>
-                <span
-                  className={`text-micro font-mono uppercase font-bold ${
-                    permit.status === 'active' ? 'text-ok' : permit.status === 'requested' ? 'text-near' : 'text-ink-dim'
-                  }`}
-                >
-                  {permit.status}
-                </span>
-              </div>
+              <span className="text-micro font-mono text-ink-dim uppercase">[{permit.kind}]</span>
             </div>
 
-            {/* Title & Workers */}
-            <div className="flex flex-col gap-1 select-text">
-              <span className="text-xs font-bold text-ink leading-relaxed">{permit.title}</span>
-              <span className="text-micro font-mono text-ink-dim uppercase">
-                Workers assigned: {permit.workers.join(', ')}
-              </span>
+            <div className="flex flex-col gap-1 select-text text-xs font-mono text-ink-dim">
+              <span>Valid: {permit.validFrom} → {permit.validTo}</span>
+              <span className="uppercase text-ink">{permit.status}</span>
             </div>
 
-            {/* SIMOPS conflict warnings */}
-            {permit.hasConflict && permit.status !== 'closed' && (
+            {permit.hasConflict && permit.conflictDescription && (
               <div className="bg-imminent/5 border border-imminent/10 p-2 rounded flex items-start gap-2 text-xs text-imminent leading-normal select-text">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">SIMOPS CONFLICT DETECTED:</span> {permit.conflictDescription}
+                  <span className="font-bold">SIMOPS CONFLICT:</span> {permit.conflictDescription}
                 </div>
-              </div>
-            )}
-
-            {/* Action buttons (Pending Approval) */}
-            {permit.status === 'requested' && (
-              <div className="flex items-center justify-end gap-2 border-t border-line/50 pt-2 shrink-0 select-none">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleReject(permit.permitId)}
-                  disabled={isSubmitting !== null}
-                  icon={<X className="h-3.5 w-3.5" />}
-                  className="text-ink-dim hover:text-imminent hover:bg-imminent/10"
-                >
-                  Reject
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => handleApprove(permit.permitId)}
-                  disabled={isSubmitting !== null}
-                  icon={<Check className="h-3.5 w-3.5" />}
-                  className="bg-ok/20 border-ok/40 text-ok hover:bg-ok/30"
-                >
-                  Approve Permit
-                </Button>
               </div>
             )}
           </Card>
         ))}
 
-        {filteredPermits.length === 0 && (
+        {filteredPermits.length === 0 && !loadError && (
           <div className="flex-1 flex items-center justify-center border border-dashed border-line rounded p-6">
-            <span className="text-xs text-ink-dim font-mono uppercase">NO PERMITS MATCH FILTER</span>
+            <span className="text-xs text-ink-dim font-mono uppercase">NO ACTIVE PERMITS</span>
           </div>
         )}
       </div>
