@@ -1,15 +1,1 @@
 # path | owner | task | until (optional)
-packages/memory | Dex | Sprint B — Intelligence Platform (B1-B7) | multi-day
-services/voice | Dex | Sprint B — near-miss + alert preview | multi-day
-tests/integration | Dex | Sprint B — integration test suite | multi-day
-services/api/verge_api/db.py | agent | M9 durable state | session
-services/edge-gateway | agent | post-api forward | session
-services/api/verge_api/routes/memory.py | Dex | Sprint B memory status/query | multi-day
-services/api/verge_api/routes/voice.py | Dex | Sprint B near-miss route | multi-day
-services/api/verge_api/routes/evidence.py | Dex | Sprint B evidence retrieval | multi-day
-services/api/tests/test_memory*.py | Dex | Sprint B memory API tests | multi-day
-services/api/tests/test_voice*.py | Dex | Sprint B voice API tests | multi-day
-services/api/tests/test_evidence*.py | Dex | Sprint B evidence API tests | multi-day
-services/api/verge_api/main.py | Dex | Sprint B include evidence router | multi-day
-services/api/verge_api/hooks.py | Dex | Sprint B feedback memory hook | multi-day
-services/api/verge_api/evidence_store.py | Dex | Sprint B evidence retrieval helper | multi-day

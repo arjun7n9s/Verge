@@ -299,3 +299,64 @@ I did not modify the env examples, risk-engine runner, console, eval, twin, depl
 - `docs/dex.md`
 - `docs/progress.md`
 - `docs/WORK.lock` for temporary lock bookkeeping
+
+## 2026-07-07 - Sprint B Intelligence Platform
+
+### What I did
+
+- Re-read `docs/dex.md` and took Sprint B as a block instead of choosing one task.
+- Claimed all Sprint B paths in `docs/WORK.lock`, including the shared API glue needed for the evidence route and feedback hook.
+- B1 / D13 Cognee hardening:
+  - Added retry/backoff settings to `CogneeClient`.
+  - Added `dataset_health()` in `packages/memory/verge_memory/status.py`.
+  - Added `GET /api/memory/status`.
+- B2 corpus expansion:
+  - Added Jaipur and BP Texas City incident summary stubs.
+  - Expanded `oisd-stubs.json` to 15+ clauses.
+  - Updated corpus loading to ingest all `*-summary.md` files.
+- B3 / D12 evidence retrieval:
+  - Added `get_evidence_manifest(...)` in `evidence_store.py`.
+  - Added `GET /api/evidence/{pack_id}` in `routes/evidence.py`.
+  - Registered the evidence router.
+- B4 / D11 near-miss voice:
+  - Added `services/voice/verge_voice/near_miss.py`.
+  - Added `POST /api/voice/near-miss`.
+  - Ensured near-miss audit payloads are copied before response mutation so the hash chain remains valid.
+- B5 / D14 alert preview:
+  - Added `services/voice/verge_voice/alert_preview.py`.
+  - Added `POST /api/findings/{id}/alert/preview`.
+  - Template fallback returns English and Hindi when LLM output is degraded.
+- B6 / D15 integration tests:
+  - Added `tests/integration/test_memory_voice_path.py`.
+  - Added a Sprint B curl matrix to `packages/memory/README.md`.
+- B7 / D10 feedback loop:
+  - Added `ingest_feedback(...)` in `packages/memory`.
+  - Wired `maybe_ingest_feedback(...)` through `services/api/verge_api/hooks.py`.
+
+### Verification
+
+- `uv sync` completed.
+- `uv run pytest packages/memory services/voice services/api/tests/test_memory_routes.py services/api/tests/test_voice_routes.py services/api/tests/test_evidence_routes.py tests/integration/test_memory_voice_path.py -q`
+  passed 26 tests.
+- `uv run ruff check packages/memory services/voice services/api/verge_api/routes/memory.py services/api/verge_api/routes/voice.py services/api/verge_api/routes/evidence.py services/api/verge_api/evidence_store.py services/api/tests/test_memory_routes.py services/api/tests/test_voice_routes.py services/api/tests/test_evidence_routes.py tests/integration/test_memory_voice_path.py`
+  passed.
+- `uv run pytest -q` passed the full suite.
+- `uv run ruff check .` passed.
+
+### Files changed by Dex in this pass
+
+- `packages/memory/**`
+- `services/voice/**`
+- `services/api/verge_api/routes/memory.py`
+- `services/api/verge_api/routes/voice.py`
+- `services/api/verge_api/routes/evidence.py`
+- `services/api/verge_api/evidence_store.py`
+- `services/api/verge_api/hooks.py`
+- `services/api/verge_api/main.py`
+- `services/api/tests/test_memory_routes.py`
+- `services/api/tests/test_voice_routes.py`
+- `services/api/tests/test_evidence_routes.py`
+- `tests/integration/test_memory_voice_path.py`
+- `docs/dex.md`
+- `docs/progress.md`
+- `docs/WORK.lock`

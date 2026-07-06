@@ -191,10 +191,9 @@ Stable response shape:
 
 ## Phase 2 — Intelligence depth (Dex, parallel heavy lifting)
 
-> **D1–D8 are done and committed.** D9 is done.  
-> **→ Dex: take Sprint B below** (multi-day, ~1–2 sessions). Claim all Sprint B paths in `WORK.lock` before starting.
+> **D1–D9 done.** **Sprint B done and committed** (2026-07-07). D16 optional remains open.
 
-### Sprint B — Intelligence Platform (Dex, large parallel block)
+### Sprint B — Intelligence Platform — complete
 
 **Goal:** Production-grade intelligence layer — not demo polish. Same degradation rules as Phase 1.  
 **Estimate:** 1–2 full days. Do not pick individual D10–D16 tasks à la carte; deliver Sprint B as one handoff.
@@ -233,38 +232,38 @@ tests/integration/test_memory_voice_path.py (new)
 
 #### D10 · Feedback → memory loop
 
-- [ ] On `POST /api/findings/{id}/feedback`, optionally ingest operator rationale to Cognee
-- [ ] `ingest_feedback(finding_id, verdict, reason_code)` in `packages/memory`
-- [ ] Hook via API (ask before editing `main.py` transition/feedback handlers — or add hook in `hooks.py` owned by main track)
+- [x] On `POST /api/findings/{id}/feedback`, optionally ingest operator rationale to Cognee
+- [x] `ingest_feedback(finding_id, verdict, reason_code)` in `packages/memory`
+- [x] Hook via API (ask before editing `main.py` transition/feedback handlers — or add hook in `hooks.py` owned by main track)
 
 #### D11 · Voice near-miss endpoint
 
-- [ ] `POST /api/voice/near-miss` — transcript + structured hazards/zones/actions
-- [ ] Optional `findingId` link; always audit-append
-- [ ] `services/voice/verge_voice/near_miss.py` + route + tests
+- [x] `POST /api/voice/near-miss` — transcript + structured hazards/zones/actions
+- [x] Optional `findingId` link; always audit-append
+- [x] `services/voice/verge_voice/near_miss.py` + route + tests
 
 #### D12 · Evidence retrieval
 
-- [ ] `GET /api/evidence/{pack_id}` — fetch manifest JSON from MinIO when configured
-- [ ] Degrade to `{ "degraded": true, "reason": "..." }` when MinIO down
-- [ ] Own `services/api/verge_api/routes/evidence.py` (Dex) — do not refactor `evidence_store.py` without lock
+- [x] `GET /api/evidence/{pack_id}` — fetch manifest JSON from MinIO when configured
+- [x] Degrade to `{ "degraded": true, "reason": "..." }` when MinIO down
+- [x] Own `services/api/verge_api/routes/evidence.py` (Dex) — do not refactor `evidence_store.py` without lock
 
 #### D13 · Cognee production hardening
 
-- [ ] Retry/backoff + timeout tuning in `packages/memory/verge_memory/client.py`
-- [ ] `dataset_health()` probe; expose in `GET /api/memory/status`
-- [ ] Corpus expand: 2–3 more incident summaries (Jaipur, Texas City stubs)
+- [x] Retry/backoff + timeout tuning in `packages/memory/verge_memory/client.py`
+- [x] `dataset_health()` probe; expose in `GET /api/memory/status`
+- [x] Corpus expand: 2–3 more incident summaries (Jaipur, Texas City stubs)
 
 #### D14 · Multilingual alert narratives
 
-- [ ] `packages/narrative/` or extend `services/voice` — aimlapi draft for orchestrator alert bodies
-- [ ] `POST /api/findings/{id}/alert/preview` — returns `{ "languages": { "en": "...", "hi": "..." }, "degraded" }`
-- [ ] Template fallback when LLM down (mirror `shift_handover.py` pattern)
+- [x] `packages/narrative/` or extend `services/voice` — aimlapi draft for orchestrator alert bodies
+- [x] `POST /api/findings/{id}/alert/preview` — returns `{ "languages": { "en": "...", "hi": "..." }, "degraded" }`
+- [x] Template fallback when LLM down (mirror `shift_handover.py` pattern)
 
 #### D15 · Intelligence integration tests
 
-- [ ] `tests/integration/test_memory_voice_path.py` — mocked Cognee + Speechmatics, full HTTP path
-- [ ] Document curl matrix in `packages/memory/README.md`
+- [x] `tests/integration/test_memory_voice_path.py` — mocked Cognee + Speechmatics, full HTTP path
+- [x] Document curl matrix in `packages/memory/README.md`
 
 #### D16 · Transcript persistence (optional)
 
@@ -357,7 +356,7 @@ tests/integration/test_memory_voice_path.py (new)
 ## Agent queue (implementation priority)
 
 1. ~~M9 durable pilot stack~~ — sql permits/readings + edge forward
-2. Review Dex Sprint B handoffs when landed
+2. ~~Dex Sprint B~~ — committed
 3. Timescale bulk ingest (optional)
 
 **Do not** take Dex Sprint B lanes — check `WORK.lock`.
