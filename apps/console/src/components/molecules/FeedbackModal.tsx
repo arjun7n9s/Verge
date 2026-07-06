@@ -21,6 +21,8 @@ const REASON_CODES = [
   { value: 'other', label: 'Other Justification' },
 ];
 
+import DOMPurify from 'dompurify';
+
 export function FeedbackModal({ finding, verdict, isOpen, onClose, onSuccess }: FeedbackModalProps) {
   const [reasonCode, setReasonCode] = useState<string>('noise');
   const [reasonText, setReasonText] = useState('');
@@ -35,11 +37,12 @@ export function FeedbackModal({ finding, verdict, isOpen, onClose, onSuccess }: 
     setError(null);
 
     try {
+      const sanitizedText = DOMPurify.sanitize(reasonText.trim());
       await submitFeedback(
         finding.findingId,
         verdict,
         reasonCode,
-        reasonText.trim() || undefined
+        sanitizedText || undefined
       );
       onSuccess();
       onClose();

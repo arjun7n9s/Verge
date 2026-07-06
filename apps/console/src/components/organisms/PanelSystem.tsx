@@ -43,6 +43,8 @@ const PRESETS = {
 
 type PresetType = 'monitoring' | 'response' | 'analysis' | 'admin';
 
+import { ErrorBoundary } from '@/components/atoms/ErrorBoundary';
+
 export function PanelSystem({ findings, boardComponent, responseComponent }: PanelSystemProps) {
   const [currentPreset, setCurrentPreset] = useState<PresetType>('monitoring');
   const [layout, setLayout] = useState(PRESETS.monitoring);
@@ -160,7 +162,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">DIGITAL TWIN PLANT MAP</span>
               </div>
               <div className="flex-1 overflow-hidden">
-                <DigitalTwinMap findings={findings} />
+                <ErrorBoundary>
+                  <DigitalTwinMap findings={findings} />
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -172,7 +176,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">ACTIVE PERMITS-TO-WORK</span>
               </div>
               <div className="flex-1 overflow-hidden pt-2">
-                <PermitsPanel />
+                <ErrorBoundary>
+                  <PermitsPanel />
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -184,7 +190,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">TELETREAD ALERTS BOARD</span>
               </div>
               <div className="flex-1 overflow-hidden pt-2">
-                {boardComponent}
+                <ErrorBoundary>
+                  {boardComponent}
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -196,7 +204,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">EMERGENCY RESPONSE BROADCASTER</span>
               </div>
               <div className="flex-1 overflow-hidden overflow-y-auto pt-2 scrollbar">
-                {responseComponent}
+                <ErrorBoundary>
+                  {responseComponent}
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -208,7 +218,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">VERGE AI RECIRCULATION REFERENCE</span>
               </div>
               <div className="flex-1 overflow-hidden pt-2">
-                <KnowledgePanel />
+                <ErrorBoundary>
+                  <KnowledgePanel />
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -220,7 +232,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">LINEAGE RELATIONSHIP GRAPH</span>
               </div>
               <div className="flex-1 overflow-hidden pt-2">
-                <KnowledgeGraphViz />
+                <ErrorBoundary>
+                  <KnowledgeGraphViz />
+                </ErrorBoundary>
               </div>
             </div>
           )}
@@ -232,7 +246,9 @@ export function PanelSystem({ findings, boardComponent, responseComponent }: Pan
                 <span className="font-bold text-ink-dim uppercase">ALERT FATIGUE METRICS SUMMARY</span>
               </div>
               <div className="flex-1 overflow-hidden overflow-y-auto pt-2 scrollbar">
-                <AlertFatigueMetrics />
+                <ErrorBoundary>
+                  <AlertFatigueMetrics />
+                </ErrorBoundary>
               </div>
             </div>
           )}

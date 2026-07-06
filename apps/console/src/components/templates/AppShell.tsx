@@ -2,12 +2,14 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useFindingsStore } from '@/stores/findings';
 import { useConnectionStore } from '@/stores/connection';
 import { SensorRibbon } from '@/components/organisms/SensorRibbon';
-import { Shield, Activity, BarChart2, Settings, History } from 'lucide-react';
+import { Shield, Activity, BarChart2, Settings, History, ArrowRightLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 
 export default function AppShell() {
   const { shadow, setShadow } = useFindingsStore();
   const { status } = useConnectionStore();
+  const { t, i18n } = useTranslation();
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col font-sans select-none">
@@ -38,7 +40,7 @@ export default function AppShell() {
             }
           >
             <Activity className="h-3.5 w-3.5" />
-            BOARD
+            {t('board')}
           </NavLink>
           <NavLink
             to="/replay"
@@ -52,7 +54,7 @@ export default function AppShell() {
             }
           >
             <History className="h-3.5 w-3.5" />
-            REPLAY
+            {t('replay')}
           </NavLink>
           <NavLink
             to="/fleet"
@@ -66,7 +68,7 @@ export default function AppShell() {
             }
           >
             <BarChart2 className="h-3.5 w-3.5" />
-            FLEET
+            {t('fleet')}
           </NavLink>
           <NavLink
             to="/audit"
@@ -80,7 +82,7 @@ export default function AppShell() {
             }
           >
             <Shield className="h-3.5 w-3.5" />
-            AUDIT
+            {t('audit')}
           </NavLink>
           <NavLink
             to="/admin"
@@ -94,12 +96,39 @@ export default function AppShell() {
             }
           >
             <Settings className="h-3.5 w-3.5" />
-            CONFIG
+            {t('config')}
+          </NavLink>
+          <NavLink
+            to="/handover"
+            className={({ isActive }) =>
+              clsx(
+                'flex items-center gap-1.5 h-8 px-3 rounded text-xs font-semibold font-mono transition-colors',
+                isActive
+                  ? 'bg-panel-2 text-ink border border-line'
+                  : 'text-ink-dim hover:text-ink hover:bg-panel-2 border border-transparent'
+              )
+            }
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5" />
+            {t('handover')}
           </NavLink>
         </nav>
 
         {/* Live/Shadow Toggle & Status Indicators */}
         <div className="flex items-center gap-4">
+          {/* Language selector select box */}
+          <select
+            value={i18n.language}
+            onChange={(e) => i18n.changeLanguage(e.target.value)}
+            className="h-7 px-1 rounded border border-line text-micro bg-bg text-ink focus:outline-none font-mono font-bold cursor-pointer"
+          >
+            <option value="en">EN</option>
+            <option value="hi">HI</option>
+            <option value="ta">TA</option>
+            <option value="te">TE</option>
+            <option value="kn">KN</option>
+          </select>
+
           {/* Connection status */}
           <div className="flex items-center gap-1.5">
             <span
@@ -122,7 +151,7 @@ export default function AppShell() {
                 !shadow ? 'bg-panel text-ink border border-line shadow-sm' : 'text-ink-dim hover:text-ink'
               )}
             >
-              LIVE
+              {t('live')}
             </button>
             <button
               onClick={() => setShadow(true)}
@@ -131,7 +160,7 @@ export default function AppShell() {
                 shadow ? 'bg-near/20 text-near border border-near/30 shadow-sm' : 'text-ink-dim hover:text-near'
               )}
             >
-              SHADOW
+              {t('shadow')}
             </button>
           </div>
         </div>

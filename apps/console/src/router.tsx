@@ -8,6 +8,7 @@ const AdminView = lazy(() => import('@/pages/AdminView'));
 const AuditView = lazy(() => import('@/pages/AuditView'));
 const ReplayView = lazy(() => import('@/pages/ReplayView'));
 const FleetView = lazy(() => import('@/pages/FleetView'));
+const ShiftHandoverView = lazy(() => import('@/pages/ShiftHandoverView'));
 
 function PageFallback() {
   return (
@@ -20,16 +21,40 @@ function PageFallback() {
   );
 }
 
+import { RoleGuard } from '@/components/atoms/RoleGuard';
+
 export default function AppRouter() {
   return (
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route element={<AppShell />}>
           <Route path="/" element={<FindingsView />} />
-          <Route path="/admin" element={<AdminView />} />
-          <Route path="/audit" element={<AuditView />} />
+          <Route
+            path="/admin"
+            element={
+              <RoleGuard allowedRoles={['Safety_Engineer', 'administrator']}>
+                <AdminView />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <RoleGuard allowedRoles={['Safety_Engineer', 'administrator']}>
+                <AuditView />
+              </RoleGuard>
+            }
+          />
           <Route path="/replay" element={<ReplayView />} />
           <Route path="/fleet" element={<FleetView />} />
+          <Route
+            path="/handover"
+            element={
+              <RoleGuard allowedRoles={['Safety_Engineer', 'administrator']}>
+                <ShiftHandoverView />
+              </RoleGuard>
+            }
+          />
           {/* Fallback redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
