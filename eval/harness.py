@@ -12,39 +12,38 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from verge_risk import STARTER_RULES, evaluate, load_rules
-from verge_risk.context import RiskContext
 from verge_schema.core import Permit, Reading, Sensor
 
-# sys.path is wired by eval/__init__.py (imported first), so these resolve.
 from eval.baselines import (
     b0_fixed_threshold,
     b1_rate_of_rise,
     b2_multi_sensor_and_gate,
 )
+from eval.runtime import (
+    REPLAYS,
+    band_calibrated,
+    load_replay,
+    run_verge_stream,
+)
 
-REPLAYS = Path(__file__).parent / "replays"
 OUT = Path(__file__).parent / "out"
-WINDOW = 12  # readings carried into each RiskContext tick (~6 min at 30s cadence)
 
 
 def _dt(s: str) -> datetime:
     return datetime.fromisoformat(s)
 
 
-def _load(incident: str):
-    d = REPLAYS / incident
-    gt = json.loads((d / "ground-truth.json").read_text(encoding="utf-8"))
+def _load_legacy(incident: str):
+    """Load sensors/readings for baseline detectors (B0/B1/B2)."""
+    _, events = load_replay(incident)
+    gt = json.loads((REPLAYS / incident / "ground-truth.json").read_text(encoding="utf-8"))
     sensors: dict[str, Sensor] = {}
     readings: dict[str, list[Reading]] = {}
     permits: list[Permit] = []
     changeovers: list[tuple[datetime, datetime, str]] = []
     pending_start: dict[str, datetime] = {}
 
-    for line in (d / "events.jsonl").read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        e = json.loads(line)
+    for e in events:
         if e["type"] == "reading":
             sid = e["sensorId"]
             if sid not in sensors:
@@ -69,36 +68,7 @@ def _load(incident: str):
 
     for r in readings.values():
         r.sort(key=lambda x: x.ts)
-    return gt, sensors, readings, permits, changeovers
-
-
-def _in_changeover(t: datetime, changeovers, zone: str) -> bool:
-    return any(s <= t <= e and z == zone for s, e, z in changeovers)
-
-
-def run_verge(gt, sensors, readings, permits, changeovers, *, window: int = WINDOW):
-    """Tick through the timeline; return (first_alert_ts, band) for the target zone."""
-    rules = load_rules(STARTER_RULES)
-    # TODO(per-sensor thresholds): thresholds is kind-keyed; if two sensors of the
-    # same kind in one zone have different calibrations, model per-sensor limits.
-    thresholds = gt["thresholds"]
-    zone = gt["zoneId"]
-    ticks = sorted({r.ts for reads in readings.values() for r in reads})
-
-    for tick in ticks:
-        windowed = {
-            sid: [r for r in reads if r.ts <= tick][-window:] for sid, reads in readings.items()
-        }
-        windowed = {sid: w for sid, w in windowed.items() if w}
-        ctx = RiskContext(
-            now=tick, sensors=sensors, readings=windowed, permits=permits,
-            thresholds=thresholds, in_changeover=_in_changeover(tick, changeovers, zone),
-        )
-        findings = evaluate(ctx, rules)
-        crit = [f for f in findings if f.zone_id == zone and f.confidence >= 0.8]
-        if crit:
-            return tick, crit[0].lead_time_band
-    return None, None
+    return gt, sensors, readings
 
 
 def _lead_min(breach: datetime, alert: datetime | None) -> float | None:
@@ -106,17 +76,18 @@ def _lead_min(breach: datetime, alert: datetime | None) -> float | None:
 
 
 def run_incident(incident: str) -> dict:
-    gt, sensors, readings, permits, changeovers = _load(incident)
+    gt, events = load_replay(incident)
+    gt_legacy, sensors, readings = _load_legacy(incident)
+    assert gt_legacy["incidentId"] == gt["incidentId"]
+
     breach = _dt(gt["breachTs"])
     thresholds = gt["thresholds"]
-
-    # Per-replay config so a different plant/cadence can be replayed without code
-    # changes; values fall back to the defaults that match the 30s-cadence demos.
     cfg = gt.get("config", {})
-    verge_ts, verge_band = run_verge(
-        gt, sensors, readings, permits, changeovers,
-        window=cfg.get("windowReadings", WINDOW),
-    )
+    window = cfg.get("windowReadings", 12)
+
+    verge_ts, verge_band = run_verge_stream(gt, events, window=window)
+    lead = _lead_min(breach, verge_ts)
+
     b0 = b0_fixed_threshold(readings, sensors, thresholds)
     b1 = b1_rate_of_rise(readings, sensors, thresholds,
                          rate_per_min=cfg.get("b1RatePerMin", 2.0))
@@ -124,7 +95,6 @@ def run_incident(incident: str) -> dict:
                                   n_required=cfg.get("b2NRequired", 2),
                                   window_min=cfg.get("b2WindowMin", 5.0))
 
-    # FPR from synthetic feedback (real feedback replaces this in Horizon 1)
     fpr = None
     fpath = REPLAYS / incident / "feedback.jsonl"
     if fpath.exists():
@@ -136,8 +106,12 @@ def run_incident(incident: str) -> dict:
     return {
         "incident": incident,
         "breachTs": gt["breachTs"],
-        "verge": {"alertTs": verge_ts.isoformat() if verge_ts else None,
-                  "band": verge_band, "leadMin": _lead_min(breach, verge_ts)},
+        "verge": {
+            "alertTs": verge_ts.isoformat() if verge_ts else None,
+            "band": verge_band,
+            "leadMin": lead,
+            "bandCalibrated": band_calibrated(verge_band, lead),
+        },
         "b0": {"alertTs": b0.isoformat() if b0 else None, "leadMin": _lead_min(breach, b0)},
         "b1": {"alertTs": b1.isoformat() if b1 else None, "leadMin": _lead_min(breach, b1)},
         "b2": {"alertTs": b2.isoformat() if b2 else None, "leadMin": _lead_min(breach, b2)},
@@ -160,25 +134,32 @@ def render_markdown(results: list[dict]) -> str:
         "> Reconstructions, not ground truth (spec §10). A regression test and a",
         "> demo — the first unbiased number comes from a pilot's own history.",
         "",
-        "| Incident | Verge lead (band) | B0 fixed | B1 rate | B2 AND-gate | FPR |",
-        "|----------|-------------------|----------|---------|-------------|-----|",
+        "| Incident | Verge lead (band) | Band OK | B0 fixed | B1 rate | B2 AND-gate | FPR |",
+        "|----------|-------------------|---------|----------|---------|-------------|-----|",
     ]
     for r in results:
         v = r["verge"]
         verge = f"{_lead(v['leadMin'])} ({_fmt(v['band'])})"
+        cal = v.get("bandCalibrated")
+        cal_s = "—" if cal is None else ("yes" if cal else "no")
         lines.append(
-            f"| {r['incident']} | **{verge}** | {_lead(r['b0']['leadMin'])} "
+            f"| {r['incident']} | **{verge}** | {cal_s} | {_lead(r['b0']['leadMin'])} "
             f"| {_lead(r['b1']['leadMin'])} | {_lead(r['b2']['leadMin'])} "
             f"| {_fmt(r['fpr'])} |"
         )
-    lines += ["", "_Lead = minutes between first alert and threshold breach. "
-              "Higher is better; 'silent' = never alerted before breach._", ""]
+    lines += [
+        "",
+        "_Lead = minutes between first alert and threshold breach. "
+        "Band OK = alert band matched minutes-to-breach. "
+        "Higher lead is better; 'silent' = never alerted before breach._",
+        "",
+    ]
     return "\n".join(lines)
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Verge replay harness")
-    grp = ap.add_mutually_exclusive_group()  # --incident and --all are exclusive
+    grp = ap.add_mutually_exclusive_group()
     grp.add_argument("--incident", help="replay id (default: --all)")
     grp.add_argument("--all", action="store_true", help="run every replay under eval/replays/")
     args = ap.parse_args()
@@ -191,7 +172,7 @@ def main() -> int:
 
     results = [run_incident(i) for i in incidents]
     OUT.mkdir(exist_ok=True)
-    (OUT / "report.json").write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
+    (OUT / "report.json").write_text(json.dumps(results, indent=2, default=str) + "\n", encoding="utf-8")
     md = render_markdown(results)
     (OUT / "report.md").write_text(md + "\n", encoding="utf-8")
     print(md)

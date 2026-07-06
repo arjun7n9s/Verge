@@ -2,7 +2,8 @@
 
 import pytest
 
-from eval.harness import REPLAYS, run_incident
+from eval.harness import run_incident
+from eval.runtime import REPLAYS
 
 ALL_REPLAYS = sorted(
     p.name for p in REPLAYS.iterdir() if (p / "ground-truth.json").exists()
