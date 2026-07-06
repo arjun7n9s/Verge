@@ -189,6 +189,62 @@ Stable response shape:
 
 ---
 
+## Phase 2 — Intelligence depth (Dex, parallel heavy lifting)
+
+> **D1–D8 are done and committed.** Pick one lane, claim it in `WORK.lock`, run tests before handoff.  
+> These are **implementation** tasks (not demo polish). Same degradation rules as Phase 1.
+
+#### D9 · Memory query API (KnowledgePanel free-text)
+
+- [x] `POST /api/memory/query` — body `{ "query": "...", "findingId": "..." }`
+- [x] Uses Cognee search; returns `{ "answer", "citations", "degraded" }`
+- [x] `services/api/verge_api/routes/memory.py` + `packages/memory/verge_memory/query.py`
+- [x] Tests with mocked HTTP only
+
+#### D10 · Feedback → memory loop
+
+- [ ] On `POST /api/findings/{id}/feedback`, optionally ingest operator rationale to Cognee
+- [ ] `ingest_feedback(finding_id, verdict, reason_code)` in `packages/memory`
+- [ ] Hook via API (ask before editing `main.py` transition/feedback handlers — or add hook in `hooks.py` owned by main track)
+
+#### D11 · Voice near-miss endpoint
+
+- [ ] `POST /api/voice/near-miss` — transcript + structured hazards/zones/actions
+- [ ] Optional `findingId` link; always audit-append
+- [ ] `services/voice/verge_voice/near_miss.py` + route + tests
+
+#### D12 · Evidence retrieval
+
+- [ ] `GET /api/evidence/{pack_id}` — fetch manifest JSON from MinIO when configured
+- [ ] Degrade to `{ "degraded": true, "reason": "..." }` when MinIO down
+- [ ] Own `services/api/verge_api/routes/evidence.py` (Dex) — do not refactor `evidence_store.py` without lock
+
+#### D13 · Cognee production hardening
+
+- [ ] Retry/backoff + timeout tuning in `packages/memory/verge_memory/client.py`
+- [ ] `dataset_health()` probe; expose in `GET /api/memory/status`
+- [ ] Corpus expand: 2–3 more incident summaries (Jaipur, Texas City stubs)
+
+#### D14 · Multilingual alert narratives
+
+- [ ] `packages/narrative/` or extend `services/voice` — aimlapi draft for orchestrator alert bodies
+- [ ] `POST /api/findings/{id}/alert/preview` — returns `{ "languages": { "en": "...", "hi": "..." }, "degraded" }`
+- [ ] Template fallback when LLM down (mirror `shift_handover.py` pattern)
+
+#### D15 · Intelligence integration tests
+
+- [ ] `tests/integration/test_memory_voice_path.py` — mocked Cognee + Speechmatics, full HTTP path
+- [ ] Document curl matrix in `packages/memory/README.md`
+
+#### D16 · Transcript persistence (optional)
+
+- [ ] SQL table or JSONL sink for voice handover transcripts (ask before `store*.py` changes)
+- [ ] `GET /api/voice/handover/recent?limit=20`
+
+**Dex Phase 2 paths:** `packages/memory/**`, `services/voice/**`, new files under `routes/`, `test_memory*.py`, `test_voice*.py`, optional new package with root `pyproject` ping.
+
+---
+
 ## Definition of done (each chunk of work)
 
 - [ ] Only touched **your** paths (+ shared files with lock + OK from Arjun)
@@ -232,62 +288,48 @@ Stable response shape:
 | Twin + geo API | `services/twin/**`, `routes/plant.py` | Agent |
 | Git / deploy / env | `.env.example`, `deploy/**`, commits | Arjun |
 
-### M1 · Console stabilize (Anshuman)
+### M1 · Console stabilize
 
-- [ ] Merge / integrate console UI locally
-- [ ] Fix API contract (`to` not `toState`, `reasonCode` on snooze)
-- [ ] Remove silent mock fallback in prod paths
-- [ ] Wire `KnowledgePanel` to Dex’s `/context` when D3 lands
+- [x] API contract, mock removal, KnowledgePanel, audit, map, handover, permits panel
+- [x] FleetView wired to `/api/fleet/summary`
+- [ ] Mobile field worker panel (sensor ribbon + voice API)
 
-### M2 · Eval = live runtime (agent)
+### M2 · Eval — [x] runtime parity, band calibration, vizag plantModel
 
-- [ ] Shared event accumulator; harness uses SIMOPS + plant YAML
-- [ ] Band calibration metric in replay report
+### M3 · Rules — [x] 16 rules
 
-### M3 · Rules expansion (agent)
+### M4 · Live path — [x] demo-live, findings + permit POST sync
 
-- [ ] `starter.yaml` 4 → 15+ rules + tests
+### M5 · GeoJSON — [x] done
 
-### M4 · Live demo path (agent)
+### M6 · API surface — [x] permits, reports, memory, voice
 
-- [ ] Script: sim → risk-engine → API → console
-
-### M5 · Plant GeoJSON (agent)
-
-- [ ] `GET /api/plant/geojson` from twin YAML
-
-### M6 · Git & infra (Arjun)
-
-- [ ] Commit Dex’s work in small chunks after review
-- [ ] Fix env spacing; `deploy/.env` passwords; `make up`
+### M7 · Infra (Arjun) — deploy env, make up
 
 ---
 
-## Agent queue (Cursor — when Arjun asks)
+## Agent queue (implementation priority)
 
-1. M2 eval parity  
-2. M3 rules  
-3. M5 GeoJSON  
-4. M4 demo script  
-5. Help wire console to `/context` after Dex D3  
+1. Console fleet/mobile mock removal  
+2. Eval plantModel on remaining replays — [x] bp-texas + jaipur YAMLs
+3. Review Dex Phase 2 handoffs  
 
-**Do not** implement `packages/memory` or `services/voice` — Dex owns those.
+**Do not** take Dex Phase 2 lanes — check `WORK.lock`.
 
 ---
 
-## End-of-sprint demo (together)
+## Integration checklist (test together later)
 
-| Step | Owner |
+| Step | Status |
 |---|---|
-| Sim → API → console shows real Vizag finding | M4 + console |
-| Finding detail → real `/context` (no fake RAG) | Dex D3 + M1 |
-| Voice handover → audit entry | Dex D5 |
-| Replay harness with full runtime | M2 |
-| Map from `/api/plant/geojson` | M5 + console |
+| Sim → API findings + permits | wired |
+| Console on real API | partial |
+| Memory / voice / audit / map | done |
+| Replay harness | done |
 
 ---
 
-## Dex demo (curl) — fill in when D3+D5 land
+## API curl reference
 
 ```bash
 # Memory context (API must be running: make dev or uvicorn)
@@ -317,4 +359,4 @@ Questions → Arjun. Spec wins → `docs/Verge.md`.
 
 ---
 
-*Last updated: 2026-07-06 — shared workspace model (no Dex GitHub pushes).*
+*Last updated: 2026-07-07 — Phase 2 Dex lanes + main-track implementation focus.*

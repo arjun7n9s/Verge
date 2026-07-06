@@ -1,1 +1,2 @@
 # path | owner | task | until (optional)
+apps/console/src/components/organisms/MobileFieldWorkerPanel.tsx | agent | sensor ribbon + voice | session
