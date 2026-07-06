@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException, Request
-from verge_memory import context_for_finding
+from pydantic import BaseModel, Field
+from verge_memory import context_for_finding, query_memory
 
 router = APIRouter(tags=["memory"])
+
+
+class MemoryQueryBody(BaseModel):
+    query: str = Field(min_length=1)
+    findingId: str | None = None
 
 
 @router.get("/findings/{finding_id}/context")
@@ -20,3 +26,14 @@ def finding_context(finding_id: str, request: Request) -> dict:
     if finding is None:
         raise HTTPException(404, "finding not found")
     return context_for_finding(finding)
+
+
+@router.post("/memory/query")
+def memory_query(body: MemoryQueryBody, request: Request) -> dict:
+    """Free-text query over incident/regulatory/plant memory."""
+    finding = None
+    if body.findingId:
+        finding = request.app.state.store.get_finding(body.findingId)
+        if finding is None:
+            raise HTTPException(404, "finding not found")
+    return query_memory(body.query, finding=finding)

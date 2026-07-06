@@ -17,3 +17,20 @@ def test_memory_context_degrades_when_cognee_unconfigured() -> None:
 
 def test_memory_context_unknown_finding_is_404() -> None:
     assert client.get("/api/findings/NOPE/context").status_code == 404
+
+
+def test_memory_query_degrades_when_cognee_unconfigured() -> None:
+    r = client.post(
+        "/api/memory/query",
+        json={"query": "what should Maya check?", "findingId": "F-CONV-07"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["degraded"] is True
+    assert body["answer"] == ""
+    assert body["citations"] == []
+
+
+def test_memory_query_unknown_finding_is_404() -> None:
+    r = client.post("/api/memory/query", json={"query": "anything", "findingId": "NOPE"})
+    assert r.status_code == 404

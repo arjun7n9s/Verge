@@ -34,3 +34,23 @@ COGNEE_DATASET_PREFIX=verge
 
 When Cognee is configured, the first retrieve call idempotently ingests the
 static seed corpus, cognifies the dataset, then queries it.
+
+## Free-Text Query
+
+`query_memory("what should the operator check?", finding=finding)` returns:
+
+```json
+{
+  "answer": "",
+  "citations": [],
+  "degraded": true
+}
+```
+
+API route:
+
+```bash
+curl -X POST http://localhost:8000/api/memory/query \
+  -H "Content-Type: application/json" \
+  -d '{"query":"what clauses apply?","findingId":"F-CONV-07"}'
+```

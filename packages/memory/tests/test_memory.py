@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import httpx
 from verge_memory.client import CogneeClient, CogneeSettings
 from verge_memory.datasets import dataset_name
+from verge_memory.query import query_memory
 from verge_memory.retrieve import context_for_finding
 from verge_schema.enums import EstimateQuality, FindingState, LeadTimeBand
 from verge_schema.findings import ContributingSignal, RiskFinding
@@ -101,3 +102,57 @@ def test_context_retrieval_with_mocked_cognee() -> None:
     assert body["regulatoryClauses"][0]["excerpt"] == "matching context"
     assert body["plantHistory"][0]["summary"] == "matching context"
     assert calls.count("/api/v1/search") == 3
+
+
+def test_query_memory_degrades_without_cognee() -> None:
+    body = query_memory("what clauses apply?", env={})
+    assert body["degraded"] is True
+    assert body["answer"] == ""
+    assert body["citations"] == []
+
+
+def test_query_memory_with_mocked_cognee() -> None:
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        if request.url.path == "/api/v1/search":
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "title": "Hot work control",
+                        "source": "oisd-stub",
+                        "text": "Pause hot work when gas readings rise near the zone.",
+                    }
+                ],
+            )
+        return httpx.Response(200, json={"ok": True})
+
+    http = httpx.Client(
+        base_url="https://tenant.aws.cognee.ai",
+        headers={"X-Api-Key": "key"},
+        transport=httpx.MockTransport(handler),
+    )
+    client = CogneeClient(
+        CogneeSettings(enabled=True, base_url="https://tenant.aws.cognee.ai", api_key="key"),
+        client=http,
+    )
+    env = {
+        "VERGE_COGNEE_ENABLED": "true",
+        "COGNEE_BASE_URL": "https://tenant.aws.cognee.ai",
+        "COGNEE_API_KEY": "key",
+        "VERGE_SITE_ID": "query-test",
+    }
+
+    body = query_memory("what should Maya check?", finding=_finding(), client=client, env=env)
+    assert body["degraded"] is False
+    assert body["answer"] == "Pause hot work when gas readings rise near the zone."
+    assert body["citations"] == [
+        {
+            "id": "oisd-stub",
+            "title": "Hot work control",
+            "excerpt": "Pause hot work when gas readings rise near the zone.",
+        }
+    ]
+    assert calls.count("/api/v1/search") == 1
