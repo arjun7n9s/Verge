@@ -62,32 +62,65 @@ def main(argv: list[str] | None = None) -> int:
     detectors = [] if args.no_simops else [_simops_detector(plant.adjacency())]
 
     posted = {"n": 0}
+    permits_posted = {"n": 0}
+
+    def _post_json(url: str, payload: str) -> None:
+        import urllib.request
+
+        req = urllib.request.Request(
+            url,
+            data=payload.encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5)  # noqa: S310
 
     def sink(f):
         line = f.model_dump_json(by_alias=True)
         sys.stdout.write(line + "\n")
         sys.stdout.flush()
         if args.post:
-            import urllib.request
-
-            req = urllib.request.Request(
-                f"{args.post.rstrip('/')}/api/findings", data=line.encode(),
-                headers={"Content-Type": "application/json"}, method="POST",
-            )
             try:
-                urllib.request.urlopen(req, timeout=5)  # noqa: S310
+                _post_json(f"{args.post.rstrip('/')}/api/findings", line)
                 posted["n"] += 1
             except Exception as exc:  # noqa: BLE001
                 print(f"post failed: {exc}", file=sys.stderr)
 
+    def on_event(e: dict) -> None:
+        if not args.post or e.get("type") != "permit":
+            return
+        body = json.dumps({
+            "permitId": e["permitId"],
+            "kind": e["kind"],
+            "zoneId": e["zoneId"],
+            "equipmentId": e.get("equipmentId"),
+            "validFrom": e["validFrom"],
+            "validTo": e["validTo"],
+            "status": e.get("status", "open"),
+        })
+        try:
+            _post_json(f"{args.post.rstrip('/')}/api/permits/upsert", body)
+            permits_posted["n"] += 1
+        except Exception as exc:  # noqa: BLE001
+            print(f"permit post failed: {exc}", file=sys.stderr)
+
+    stream_kw = {
+        "thresholds": thresholds,
+        "detectors": detectors,
+        "shadow": args.shadow,
+        "event_hook": on_event if args.post else None,
+    }
+
     if args.redpanda:
-        consume_redpanda(args.redpanda, args.topic, rules, sink,
-                         thresholds=thresholds, detectors=detectors, shadow=args.shadow)
+        consume_redpanda(args.redpanda, args.topic, rules, sink, **stream_kw)
     else:
-        n = run_stream(_events_from(args.source), rules, sink,
-                       thresholds=thresholds, detectors=detectors, shadow=args.shadow)
+        n = run_stream(_events_from(args.source), rules, sink, **stream_kw)
         mode = "shadow" if args.shadow else "live"
-        print(f"[{mode}] emitted {n} finding(s); posted {posted['n']}", file=sys.stderr)
+        print(
+            f"[{mode}] emitted {n} finding(s); posted {posted['n']}; "
+            f"permits {permits_posted['n']}",
+            file=sys.stderr,
+        )
     return 0
 
 

@@ -98,6 +98,7 @@ def run_stream(
     shadow: bool = False,
     min_confidence: float = 0.8,
     window: int = WINDOW,
+    event_hook: Callable[[dict], None] | None = None,
 ) -> int:
     """Drive the engine over a live stream. Runs the gas rules plus any injected
     detectors (e.g. SIMOPS), emits each qualifying finding once (deduped by zone
@@ -110,8 +111,11 @@ def run_stream(
     seen: set[tuple[str, tuple[str, ...]]] = set()
     emitted = 0
     for e in events:
+        kind = state.ingest(e)
+        if event_hook is not None:
+            event_hook(e)
         # readings and permits both change the risk picture; re-evaluate on either.
-        if state.ingest(e) not in ("reading", "permit"):
+        if kind not in ("reading", "permit"):
             continue
         findings = list(evaluate(state.context(), rules))
         for detect in detectors:

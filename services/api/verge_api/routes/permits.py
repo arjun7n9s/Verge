@@ -35,3 +35,10 @@ def replace_permits(body: PermitsReplaceBody, request: Request) -> dict:
     """Replace the active permit set (sim / edge-gateway feed)."""
     request.app.state.permits.replace(body.permits)
     return {"count": len(body.permits)}
+
+
+@router.post("/permits/upsert")
+def upsert_permit(permit: Permit, request: Request) -> dict:
+    """Upsert one permit from the live event stream (risk-engine --post sync)."""
+    request.app.state.permits.upsert(permit)
+    return permit.model_dump(by_alias=True, mode="json")

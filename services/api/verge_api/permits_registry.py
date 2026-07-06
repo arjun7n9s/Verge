@@ -1,7 +1,7 @@
 """Active permit registry for the API (demo + live sim feed).
 
 Permits are held in app state — not yet persisted in SqlStore. The sim / edge
-gateway can POST updates later; for now we seed Vizag-aligned permits at startup.
+gateway can POST updates via upsert/replace; risk-engine syncs on --post.
 """
 
 from __future__ import annotations
@@ -15,14 +15,14 @@ from verge_twin import load_plant
 
 class PermitRegistry:
     def __init__(self) -> None:
-        self._permits: list[Permit] = []
+        self._permits: dict[str, Permit] = {}
         self._adjacency: dict[str, set[str]] = {}
 
     def seed_demo(self, at: datetime) -> None:
         plant = load_plant()
         self._adjacency = plant.adjacency()
         window = timedelta(hours=4)
-        self._permits = [
+        for permit in (
             Permit(
                 permit_id="PW-2025-0142",
                 kind="hot-work",
@@ -55,15 +55,34 @@ class PermitRegistry:
                 valid_to=at + window,
                 status="open",
             ),
-        ]
+        ):
+            self._permits[permit.permit_id] = permit
 
     def replace(self, permits: list[Permit]) -> None:
-        self._permits = list(permits)
+        self._permits = {p.permit_id: p for p in permits}
+
+    def upsert(self, permit: Permit) -> None:
+        if not self._adjacency:
+            self._adjacency = load_plant().adjacency()
+        self._permits[permit.permit_id] = permit
+
+    def upsert_event(self, event: dict) -> None:
+        """Upsert from a canonical stream permit event."""
+        permit = Permit(
+            permit_id=event["permitId"],
+            kind=event["kind"],
+            zone_id=event["zoneId"],
+            equipment_id=event.get("equipmentId"),
+            valid_from=datetime.fromisoformat(event["validFrom"]),
+            valid_to=datetime.fromisoformat(event["validTo"]),
+            status=event.get("status", "open"),
+        )
+        self.upsert(permit)
 
     def list_active(self, *, now: datetime | None = None) -> list[Permit]:
         now = now or datetime.now(UTC)
         return [
-            p for p in self._permits
+            p for p in self._permits.values()
             if p.status == "open" and p.valid_from <= now <= p.valid_to
         ]
 
