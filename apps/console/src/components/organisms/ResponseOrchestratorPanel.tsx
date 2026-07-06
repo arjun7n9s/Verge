@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   Languages,
 } from 'lucide-react';
-import { transitionFinding } from '@/api';
+import { transitionFinding, respondToFinding } from '@/api';
 
 interface ResponseOrchestratorProps {
   activeFindings: RiskFinding[];
@@ -79,20 +79,23 @@ export function ResponseOrchestratorPanel({ activeFindings, onChange }: Response
   const handleDispatch = async () => {
     setIsSending(true);
     try {
-      // Transition finding to 'escalated'
+      const response = await respondToFinding(trigger.findingId);
+
       await transitionFinding(
         trigger.findingId,
         'escalated',
-        `Emergency alerts dispatched to ${selectedTarget === 'all' ? 'All Personnel' : selectedTarget === 'role' ? targetRole : trigger.zoneId} via channels: ${selectedChannels.join(', ')}`
+        `Emergency alerts drafted for ${selectedTarget === 'all' ? 'All Personnel' : selectedTarget === 'role' ? targetRole : trigger.zoneId} via ${selectedChannels.join(', ')}`,
+        'emergency-dispatch',
       );
 
-      // Populate mock delivery logs
-      setDeliveryStatus([
-        { name: 'John Doe (Zone Operator)', channel: 'SMS', status: 'Delivered' },
-        { name: 'Sarah Smith (Shift Lead)', channel: 'Mobile App', status: 'Acknowledged' },
-        { name: 'P. Kumar (Field Tech)', channel: 'SMS', status: 'Pending' },
-        { name: 'Muster Point PA System', channel: 'PA PA', status: 'Active Broadcast' },
-      ]);
+      const langs = (response.alert.languages as string[] | undefined) ?? ['en'];
+      setDeliveryStatus(
+        langs.map((code) => ({
+          name: `Advisory draft (${code.toUpperCase()})`,
+          channel: selectedChannels.join('/') || 'orchestrator',
+          status: response.report.narrativeDegraded ? 'Degraded narrative' : 'Draft ready',
+        })),
+      );
 
       onChange();
     } catch (err) {

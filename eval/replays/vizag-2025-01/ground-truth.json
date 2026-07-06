@@ -2,6 +2,7 @@
   "incidentId": "vizag-2025-01",
   "title": "Visakhapatnam Steel Plant coke-oven gas incident (reconstructed)",
   "zoneId": "B-04",
+  "plantModel": "services/twin/verge_twin/plants/vizag-coke-oven.yaml",
   "breachTs": "2025-01-13T07:05:00+00:00",
   "thresholdSensor": "LEL-04",
   "thresholds": {

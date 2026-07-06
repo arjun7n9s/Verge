@@ -41,7 +41,8 @@ export function SnoozeDialog({ finding, isOpen, onClose, onSuccess }: SnoozeDial
       await transitionFinding(
         finding.findingId,
         'snoozed',
-        `Snoozed for ${duration} min. Reason: ${reason.trim()}`
+        `Snoozed for ${duration} min. Reason: ${reason.trim()}`,
+        'operator-defer',
       );
       onSuccess();
       onClose();

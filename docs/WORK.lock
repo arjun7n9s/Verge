@@ -1,3 +1,13 @@
 # path | owner | task | until (optional)
-# Delete your line when done. One line per active edit zone.
-# Shared files (main.py, pyproject.toml, schema) MUST be listed here before editing.
+apps/console/src | agent | console API wiring M1 | session
+eval/replays/vizag-2025-01/ground-truth.json | agent | SIMOPS plant parity | session
+packages/memory | Dex | D1-D3 memory context scaffold | session
+services/voice | Dex | D4 voice scaffold | session
+services/api/verge_api/routes/memory.py | Dex | D3 memory context route | session
+services/api/verge_api/routes/voice.py | Dex | D5 voice routes | session
+services/api/tests/test_memory_routes.py | Dex | D3 route tests | session
+services/api/tests/test_voice_routes.py | Dex | D5 route tests | session
+services/api/verge_api/main.py | Dex | include memory and voice routers | session
+services/api/pyproject.toml | Dex | add memory/voice dependencies | session
+pyproject.toml | Dex | register Dex workspaces | session
+docs/progress.md | Dex | progress update | session

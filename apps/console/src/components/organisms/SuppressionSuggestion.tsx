@@ -9,24 +9,39 @@ interface SuppressionSuggestionProps {
   onChange: () => void;
 }
 
+function duplicateGroups(findings: RiskFinding[]): Array<{ primary: RiskFinding; duplicate: RiskFinding }> {
+  const open = findings.filter((f) => f.state === 'new' && !f.shadow);
+  const byKey = new Map<string, RiskFinding[]>();
+  for (const f of open) {
+    const key = `${f.zoneId}::${f.title}`;
+    byKey.set(key, [...(byKey.get(key) ?? []), f]);
+  }
+  const pairs: Array<{ primary: RiskFinding; duplicate: RiskFinding }> = [];
+  for (const group of byKey.values()) {
+    if (group.length < 2) continue;
+    const sorted = [...group].sort((a, b) => a.findingId.localeCompare(b.findingId));
+    const [primary, ...rest] = sorted;
+    for (const duplicate of rest) {
+      pairs.push({ primary, duplicate });
+    }
+  }
+  return pairs;
+}
+
 export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionSuggestionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Find candidate duplicate findings.
-  // In a real system, Verge risk engine flags findings with `suppressedAsPrimaryId` or similar recommendation metadata.
-  // Let's filter findings in the 'new' or 'acknowledged' states that share zones and titles to simulate suggestions.
-  const suggestions = activeFindings.filter((f) => f.state === 'new' && f.title.includes('Methane') && f.findingId !== 'rf-0491');
+  const suggestions = duplicateGroups(activeFindings);
 
   if (suggestions.length === 0) return null;
 
-  const handleConfirm = async (duplicateId: string) => {
+  const handleConfirm = async (duplicate: RiskFinding, primary: RiskFinding) => {
     setIsSubmitting(true);
     try {
-      // Transition state to 'suppressed-as-duplicate'
       await transitionFinding(
-        duplicateId,
+        duplicate.findingId,
         'suppressed-as-duplicate',
-        'Operator approved duplicate suppression suggestion. Merged into rf-0491.'
+        `Merged into ${primary.findingId}`,
+        'duplicate-confirmed',
       );
       onChange();
     } catch (err) {
@@ -39,11 +54,11 @@ export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionS
   const handleReject = async (duplicateId: string) => {
     setIsSubmitting(true);
     try {
-      // Discard suggestion (simulated by marking it as acknowledged so it doesn't trigger the recommendation block)
       await transitionFinding(
         duplicateId,
         'acknowledged',
-        'Operator rejected suppression suggestion. Kept as independent alert.'
+        'Operator rejected duplicate suppression suggestion.',
+        'duplicate-rejected',
       );
       onChange();
     } catch (err) {
@@ -55,9 +70,9 @@ export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionS
 
   return (
     <div className="flex flex-col gap-2 shrink-0 select-none">
-      {suggestions.map((item) => (
+      {suggestions.map(({ primary, duplicate }) => (
         <Card
-          key={item.findingId}
+          key={duplicate.findingId}
           className="border-accent/30 bg-accent/5 p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-ink"
         >
           <div className="flex items-start gap-2.5">
@@ -67,12 +82,11 @@ export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionS
             <div className="flex flex-col gap-0.5">
               <div className="text-xs font-bold flex items-center gap-1.5">
                 <span>COLLAPSE SUGGESTION: duplicate risk finding detected</span>
-                <span className="text-micro font-mono bg-accent/20 px-1 border border-accent/30 rounded text-accent">
-                  CO-CONVERGENCE
-                </span>
               </div>
               <p className="text-xs text-ink-dim leading-relaxed">
-                Verge recommends merging finding <code className="text-accent">{item.findingId}</code> ({item.title}) into primary alert <code className="text-accent">rf-0491</code> in {item.zoneId}. Both share identical sensor lineages.
+                Merge <code className="text-accent">{duplicate.findingId}</code> into{' '}
+                <code className="text-accent">{primary.findingId}</code> ({primary.title}) in{' '}
+                {duplicate.zoneId}.
               </p>
             </div>
           </div>
@@ -81,7 +95,7 @@ export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionS
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleReject(item.findingId)}
+              onClick={() => handleReject(duplicate.findingId)}
               disabled={isSubmitting}
               className="text-ink-dim hover:text-imminent hover:bg-imminent/10 hover:border-imminent/20"
               icon={<X className="h-3.5 w-3.5" />}
@@ -91,7 +105,7 @@ export function SuppressionSuggestion({ activeFindings, onChange }: SuppressionS
             <Button
               variant="primary"
               size="sm"
-              onClick={() => handleConfirm(item.findingId)}
+              onClick={() => handleConfirm(duplicate, primary)}
               disabled={isSubmitting}
               className="bg-accent/20 border-accent/40 text-accent hover:bg-accent/30"
               icon={<Check className="h-3.5 w-3.5" />}
