@@ -16,6 +16,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Float,
     Integer,
     MetaData,
     String,
@@ -66,6 +67,28 @@ sensor_health = Table(
     "sensor_health", metadata,
     Column("quality", String, primary_key=True),
     Column("count", Integer),
+)
+
+permit = Table(
+    "permit", metadata,
+    Column("permit_id", String, primary_key=True),
+    Column("kind", String, nullable=False),
+    Column("zone_id", String, nullable=False, index=True),
+    Column("equipment_id", String, nullable=True),
+    Column("valid_from", DateTime(timezone=True), nullable=False),
+    Column("valid_to", DateTime(timezone=True), nullable=False),
+    Column("status", String, nullable=False, default="open"),
+)
+
+sensor_reading = Table(
+    "sensor_reading", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("sensor_id", String, index=True, nullable=False),
+    Column("ts", DateTime(timezone=True), index=True, nullable=False),
+    Column("value", Float, nullable=False),
+    Column("zone_id", String, nullable=True),
+    Column("kind", String, nullable=True),
+    Column("unit", String, nullable=True),
 )
 
 

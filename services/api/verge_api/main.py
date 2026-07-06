@@ -28,8 +28,7 @@ from verge_twin.plant import DEMO_PLANT
 from .evidence_store import upload_evidence_manifest
 from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
-from .permits_registry import PermitRegistry
-from .reading_buffer import ReadingBuffer
+from .routes.evidence import router as evidence_router
 from .routes.fleet import router as fleet_router
 from .routes.memory import router as memory_router
 from .routes.permits import router as permits_router
@@ -38,12 +37,14 @@ from .routes.readings import router as readings_router
 from .routes.reports import router as reports_router
 from .routes.voice import router as voice_router
 from .seed import seed
+from .state_factory import make_permits_registry, make_reading_buffer
 
 app = FastAPI(title="Verge API", version="0.3.0")
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
 app.include_router(fleet_router, prefix="/api")
+app.include_router(evidence_router, prefix="/api")
 app.include_router(plant_router, prefix="/api")
 app.include_router(readings_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
@@ -55,7 +56,7 @@ app.include_router(reports_router, prefix="/api")
 # so a durable store keeps its history across restarts.
 store = make_store()
 app.state.store = store
-app.state.permits = PermitRegistry()
+app.state.permits = make_permits_registry(store=store)
 llm = provider_from_env()
 app.state.llm = llm
 if not store.list_findings(shadow=None):
@@ -63,7 +64,7 @@ if not store.list_findings(shadow=None):
 app.state.permits.seed_demo(datetime.now(UTC))
 
 _demo_plant = load_plant(DEMO_PLANT)
-app.state.readings = ReadingBuffer()
+app.state.readings = make_reading_buffer(store=store)
 app.state.readings.seed_from_replay()
 app.state.sensor_thresholds = _demo_plant.thresholds_by_kind()
 
