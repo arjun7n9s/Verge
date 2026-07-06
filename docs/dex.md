@@ -172,13 +172,13 @@ Stable response shape:
 
 #### D6 · Shift handover report (optional)
 
-- [ ] `POST /api/reports/shift-handover` — facts + aimlapi narrative, template fallback, never auto-submit
+- [x] `POST /api/reports/shift-handover` — facts + aimlapi narrative, template fallback, never auto-submit
 
 ---
 
 #### D7 · MinIO manifest stub (optional)
 
-- [ ] Upload JSON manifest when `MINIO_*` configured; skip silently otherwise
+- [x] Upload JSON manifest when `MINIO_*` configured; skip silently otherwise
 
 ---
 

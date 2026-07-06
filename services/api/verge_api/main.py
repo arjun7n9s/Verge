@@ -23,9 +23,14 @@ from verge_schema.enums import FindingState as S
 from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
 
+from .evidence_store import upload_evidence_manifest
 from .factory import make_store
+from .hooks import maybe_ingest_closed_finding
+from .permits_registry import PermitRegistry
 from .routes.memory import router as memory_router
+from .routes.permits import router as permits_router
 from .routes.plant import router as plant_router
+from .routes.reports import router as reports_router
 from .routes.voice import router as voice_router
 from .seed import seed
 
@@ -36,14 +41,19 @@ app.add_middleware(
 app.include_router(plant_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
+app.include_router(permits_router, prefix="/api")
+app.include_router(reports_router, prefix="/api")
 
 # Backend from VERGE_STORE (memory default; sql persists). Seed only when empty
 # so a durable store keeps its history across restarts.
 store = make_store()
 app.state.store = store
+app.state.permits = PermitRegistry()
+llm = provider_from_env()
+app.state.llm = llm
 if not store.list_findings(shadow=None):
     seed(store)
-llm = provider_from_env()
+app.state.permits.seed_demo(datetime.now(UTC))
 
 
 class TransitionBody(BaseModel):
@@ -112,6 +122,7 @@ def transition_finding(finding_id: str, body: TransitionBody) -> dict:
         f = store.transition(finding_id, body.to, body.actor, body.reasonCode, body.reasonText)
     except IllegalTransition as e:
         raise HTTPException(409, str(e)) from e
+    maybe_ingest_closed_finding(f, to=body.to)
     return f.model_dump(by_alias=True, mode="json")
 
 
@@ -137,10 +148,14 @@ def respond_to_finding(finding_id: str) -> dict:
             actor="orchestrator", kind=payload["kind"], payload=payload,
             timestamp=datetime.now(UTC),
         )
+    object_store = upload_evidence_manifest(r.evidence)
     return {
         "action": r.action.model_dump(by_alias=True, mode="json"),
         "alert": r.alert.model_dump(by_alias=True, mode="json"),
-        "evidence": r.evidence.model_dump(by_alias=True, mode="json"),
+        "evidence": {
+            **r.evidence.model_dump(by_alias=True, mode="json"),
+            "objectStore": object_store,
+        },
         "report": {
             "markdown": r.report.markdown,
             "cited": r.report.cited,

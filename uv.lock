@@ -964,8 +964,10 @@ dependencies = [
     { name = "verge-llm" },
     { name = "verge-memory" },
     { name = "verge-orchestrator" },
+    { name = "verge-permit" },
     { name = "verge-risk-engine" },
     { name = "verge-schema" },
+    { name = "verge-twin" },
     { name = "verge-voice" },
 ]
 
@@ -985,8 +987,10 @@ requires-dist = [
     { name = "verge-llm", editable = "packages/llm" },
     { name = "verge-memory", editable = "packages/memory" },
     { name = "verge-orchestrator", editable = "services/orchestrator" },
+    { name = "verge-permit", editable = "services/permit" },
     { name = "verge-risk-engine", editable = "services/risk-engine" },
     { name = "verge-schema", editable = "packages/schema" },
+    { name = "verge-twin", editable = "services/twin" },
     { name = "verge-voice", editable = "services/voice" },
 ]
 provides-extras = ["postgres"]
