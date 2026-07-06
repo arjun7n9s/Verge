@@ -2,7 +2,7 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f deploy/docker-compose.yml --env-file deploy/.env
 
-.PHONY: help install up down logs seed dev api console eval test lint fmt
+.PHONY: help install up down logs seed dev api console eval test lint fmt demo-live
 
 install: ## Set up the workspace (uv sync + pnpm install)
 	uv sync
@@ -35,6 +35,9 @@ console: ## Run the operator console (Vite)
 
 eval: ## Run the replay harness vs baselines B0/B1/B2
 	uv run verge replay --all
+
+demo-live: ## Live path: sim stream -> risk-engine -> API (needs api on :8000)
+	uv run verge sim --scenario vizag-like | uv run python -m verge_risk --post http://localhost:8000
 
 test: ## Run the Python test suite
 	uv run pytest
