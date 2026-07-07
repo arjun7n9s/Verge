@@ -7,7 +7,8 @@
       "kind": "isolation-forest",
       "stage": "production",
       "metrics": {"recall": 0.91, "fpr": 0.06},
-      "artifact_ref": "models/compound-risk-1.2.0.pkl",
+      "artifact_ref": "compound-risk-1.2.0.pkl",
+      "artifact_digest": "5fe470acb5ccf261f9add08a26f7302d3e04ff7fbd50b13e22acb82b24db0d15",
       "notes": "Vizag-replay validated; promoted after 30-day shadow.",
       "created_at": "2026-05-01T00:00:00+00:00"
     },

@@ -5,6 +5,15 @@ air-gapped bundle. The ML layer gets the same lifecycle discipline as findings:
 nothing reaches production without passing shadow + canary first.
 """
 
+from .artifacts import (
+    ArtifactError,
+    artifact_root,
+    load_sklearn_bundle,
+    production_model,
+    resolve_artifact_path,
+    sha256_file,
+    verify_artifact,
+)
 from .drift import (
     MODERATE,
     SIGNIFICANT,
@@ -33,6 +42,13 @@ def demo_registry() -> ModelRegistry:
 
 
 __all__ = [
+    "ArtifactError",
+    "artifact_root",
+    "load_sklearn_bundle",
+    "production_model",
+    "resolve_artifact_path",
+    "sha256_file",
+    "verify_artifact",
     "CANARY",
     "DEMO_REGISTRY",
     "MODERATE",

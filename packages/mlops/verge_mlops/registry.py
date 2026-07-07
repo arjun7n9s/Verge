@@ -52,6 +52,7 @@ class ModelCard:
     stage: str = REGISTERED
     metrics: dict = field(default_factory=dict)
     artifact_ref: str | None = None
+    artifact_digest: str | None = None
     notes: str = ""
     created_at: str | None = None
 
