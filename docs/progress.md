@@ -612,3 +612,41 @@ CLI verbs: `commission`, `plant`, `sensor`, `rules adopt`, `compliance`,
 `incident-report`, `ingest`, `validate`, `models`. New API routes: compliance
 (report/gaps/changes/incident-report), vision, models, ops (+/metrics), alert
 dispatch. Rule library 15 → 33. Tests 152 → 254, all green; ruff clean.
+
+## 2026-07-07 - Deep backend architecture audit (Dex)
+
+Audited the current backend/deployment architecture end-to-end, excluding the
+unfinished frontend as requested. Covered API gateway, auth, SQL store, audit
+chain, streaming fan-out, risk engine, CEP/ML layer, contracts, MLOps, edge
+gateway, connectors, compliance, vision, Timescale/Redpanda/Postgres/Neo4j/MinIO
+deployment, K8s manifests, observability, and operations docs.
+
+Produced `docs/backend_architecture_audit.md` with prioritized production-readiness
+findings and a 90-day hardening plan. Key weaknesses found:
+
+- Auth/security is still development-grade by default: permissive CORS, optional
+  auth, JWT audience verification disabled, no API route RBAC/ABAC, demo Keycloak
+  credentials, and K8s config with auth off.
+- Risk streaming is deterministic and explainable, but not a production
+  event-time/stateful stream processor: in-process state, in-memory dedupe,
+  `latest` consumer reset, no DLQ/offset discipline/checkpointing/watermarks.
+- Audit is tamper-evident but not regulator-grade immutable evidence until audit
+  heads are signed/anchored out-of-band and evidence object storage is WORM-locked.
+- Persistence and deployment are pilot-grade: runtime `create_all`, thin DB
+  constraints, delete-then-insert idempotency, best-effort Timescale writes,
+  single-replica `:latest` K8s deployments, no resources/securityContext/
+  NetworkPolicy/PDB/Secrets.
+- Contracts, MLOps, connectors, compliance, and observability exist as strong
+  skeletons but need enforcement, registry/artifact wiring, connector SDKs,
+  signed regulatory packs, and end-to-end traces before pilot production.
+
+Benchmarked architecture against mature/open primary references: Apache Flink
+event-time/CEP, Kafka delivery semantics, EdgeX Foundry edge architecture,
+Apicurio/Confluent-style schema registry, OpenLineage, OpenTelemetry, MLflow,
+KServe, MinIO WORM object lock, Kubernetes production primitives, Keycloak/OWASP
+API security, Sigstore/Cosign, OPA, and NIST SP 800-82 OT security guidance.
+
+Verification:
+
+- `uv run pytest -q` -> 324 passed, 1 warning.
+- `uv run ruff check .` -> all checks passed.
