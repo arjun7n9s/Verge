@@ -21,6 +21,8 @@ from pathlib import Path
 
 from verge_schema.enums import DataQuality
 
+from .timescale_writer import timescale_status
+
 _REPLAY_REPORT = Path(__file__).resolve().parents[3] / "eval/out/report.json"
 
 
@@ -118,6 +120,7 @@ def ops_snapshot(
         "backup": {"lastTs": backup_ts, "ageSeconds": _age_seconds(backup_ts, now)},
         "signedBundle": {"builtTs": bundle_ts, "ageSeconds": _age_seconds(bundle_ts, now)},
         "lastReplayRun": _last_replay_run(now),
+        "timescale": timescale_status(env=env),
     }
 
 
