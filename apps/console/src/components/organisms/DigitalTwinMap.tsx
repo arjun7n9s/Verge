@@ -3,9 +3,10 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { RiskFinding } from '@/types';
 import type { PlantGeoJson } from '@/api/plant';
-import { getPlantGeoJson } from '@/api';
+import { getPlantGeoJson, getZoneExclusion } from '@/api';
+import type { PlumeExclusionFeature } from '@/api/platform';
 import { Card, Badge, Button } from '@/components/atoms';
-import { Shield, Radio, Compass, Layers, AlertCircle } from 'lucide-react';
+import { Shield, Radio, Compass, Layers, AlertCircle, Wind } from 'lucide-react';
 import {
   centroidsByZone,
   enrichPlantGeoJson,
@@ -36,9 +37,11 @@ const LOCAL_STYLE: maplibregl.StyleSpecification = {
 export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const [activeLayers, setActiveLayers] = useState<string[]>(['zones', 'sensors', 'findings']);
+  const [activeLayers, setActiveLayers] = useState<string[]>(['zones', 'sensors', 'findings', 'plume']);
   const [plantBase, setPlantBase] = useState<PlantGeoJson | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [plumeZoneId, setPlumeZoneId] = useState<string | null>(null);
+  const [plumeFeature, setPlumeFeature] = useState<PlumeExclusionFeature | null>(null);
   const [selectedSensor, setSelectedSensor] = useState<MapSensor | null>(null);
   const [markerPositions, setMarkerPositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -101,6 +104,36 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
     };
   }, []);
 
+  const imminentZone = useMemo(() => {
+    const hit = findings.find((f) => !f.shadow && f.leadTimeBand === 'IMMINENT');
+    return hit?.zoneId ?? null;
+  }, [findings]);
+
+  useEffect(() => {
+    if (!imminentZone) {
+      setPlumeZoneId(null);
+      setPlumeFeature(null);
+      return;
+    }
+    let cancelled = false;
+    getZoneExclusion(imminentZone)
+      .then((res) => {
+        if (!cancelled) {
+          setPlumeZoneId(res.zoneId);
+          setPlumeFeature(res.exclusion);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPlumeZoneId(null);
+          setPlumeFeature(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [imminentZone]);
+
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -161,6 +194,30 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
         },
       });
 
+      map.addSource('exclusion-plume', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'plume-fill',
+        type: 'fill',
+        source: 'exclusion-plume',
+        paint: {
+          'fill-color': 'rgba(240, 99, 99, 0.35)',
+          'fill-outline-color': '#f06363',
+        },
+      });
+      map.addLayer({
+        id: 'plume-line',
+        type: 'line',
+        source: 'exclusion-plume',
+        paint: {
+          'line-color': '#f06363',
+          'line-width': 2,
+          'line-dasharray': [2, 1],
+        },
+      });
+
       updateMarkerPositions();
     });
 
@@ -191,11 +248,23 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
+    const source = map.getSource('exclusion-plume') as maplibregl.GeoJSONSource | undefined;
+    if (!source) return;
+    const features = plumeFeature && activeLayers.includes('plume') ? [plumeFeature] : [];
+    source.setData({ type: 'FeatureCollection', features });
+  }, [plumeFeature, activeLayers]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
 
     const zonesVisible = activeLayers.includes('zones') ? 'visible' : 'none';
+    const plumeVisible = activeLayers.includes('plume') && plumeFeature ? 'visible' : 'none';
     if (map.getLayer('zones-fill')) map.setLayoutProperty('zones-fill', 'visibility', zonesVisible);
     if (map.getLayer('zones-line')) map.setLayoutProperty('zones-line', 'visibility', zonesVisible);
-  }, [activeLayers]);
+    if (map.getLayer('plume-fill')) map.setLayoutProperty('plume-fill', 'visibility', plumeVisible);
+    if (map.getLayer('plume-line')) map.setLayoutProperty('plume-line', 'visibility', plumeVisible);
+  }, [activeLayers, plumeFeature]);
 
   useEffect(() => {
     updateMarkerPositions();
@@ -229,6 +298,7 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
               { id: 'zones', label: 'Plant Zones', icon: <Compass className="h-3.5 w-3.5" /> },
               { id: 'sensors', label: 'IoT Sensors', icon: <Radio className="h-3.5 w-3.5" /> },
               { id: 'findings', label: 'Active Risks', icon: <Shield className="h-3.5 w-3.5" /> },
+              { id: 'plume', label: 'Gas Plume', icon: <Wind className="h-3.5 w-3.5" /> },
             ].map((layer) => (
               <button
                 key={layer.id}
@@ -244,6 +314,11 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
               </button>
             ))}
           </div>
+          {plumeZoneId && (
+            <span className="text-micro font-mono text-imminent px-1">
+              Plume overlay · zone {plumeZoneId}
+            </span>
+          )}
         </Card>
       </div>
 

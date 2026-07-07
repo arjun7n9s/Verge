@@ -44,6 +44,8 @@ export {
   getStreamStatus,
   syncPlantGraph,
   getTimescaleStatus,
+  getFatigueMetrics,
+  getZoneExclusion,
 } from './platform';
 export type {
   DegradationBanner,
@@ -59,6 +61,10 @@ export type {
   CommissionSummary,
   StreamStatus,
   TimescaleStatus,
+  FatigueMetrics,
+  FatigueZoneMetric,
+  ZoneExclusion,
+  PlumeExclusionFeature,
 } from './platform';
 export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';

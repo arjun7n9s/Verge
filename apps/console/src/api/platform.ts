@@ -158,3 +158,51 @@ export interface TimescaleStatus {
 export async function getTimescaleStatus(signal?: AbortSignal): Promise<TimescaleStatus> {
   return request<TimescaleStatus>('/api/timescale/status', { signal });
 }
+
+export interface FatigueZoneMetric {
+  zoneId: string;
+  current: number;
+  limit: number;
+  pct: number;
+}
+
+export interface FatigueMetrics {
+  fpr: number | null;
+  alertsPerShift: number;
+  falseAlarmRatio: number | null;
+  operatorActionRate: number | null;
+  trend: Array<{ date: string; falseAlarms: number; useful: number }>;
+  zones: FatigueZoneMetric[];
+  measured: boolean;
+}
+
+export async function getFatigueMetrics(signal?: AbortSignal): Promise<FatigueMetrics> {
+  return request<FatigueMetrics>('/api/fatigue/metrics', { signal });
+}
+
+export interface PlumeExclusionFeature {
+  type: 'Feature';
+  properties: Record<string, unknown>;
+  geometry: { type: 'Polygon'; coordinates: number[][][] };
+}
+
+export interface ZoneExclusion {
+  zoneId: string;
+  exclusion: PlumeExclusionFeature;
+}
+
+export async function getZoneExclusion(
+  zoneId: string,
+  params?: { windSpeedMs?: number; windDirDeg?: number; releaseRateKgS?: number },
+  signal?: AbortSignal,
+): Promise<ZoneExclusion> {
+  const qs = new URLSearchParams();
+  if (params?.windSpeedMs != null) qs.set('windSpeedMs', String(params.windSpeedMs));
+  if (params?.windDirDeg != null) qs.set('windDirDeg', String(params.windDirDeg));
+  if (params?.releaseRateKgS != null) qs.set('releaseRateKgS', String(params.releaseRateKgS));
+  const q = qs.toString();
+  return request<ZoneExclusion>(
+    `/api/zones/${encodeURIComponent(zoneId)}/exclusion${q ? `?${q}` : ''}`,
+    { signal },
+  );
+}
