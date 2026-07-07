@@ -2,8 +2,9 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f deploy/docker-compose.yml --env-file deploy/.env
 COMPOSE_APP := $(COMPOSE) --profile app
+COMPOSE_STREAM := $(COMPOSE) --profile app --profile stream
 
-.PHONY: help install up up-app down logs seed dev api console eval test lint fmt demo-live ci \
+.PHONY: help install up up-app up-stream down logs seed dev api console eval test lint fmt demo-live ci \
         commission compliance models demo-h1
 
 install: ## Set up the workspace (uv sync + pnpm install)
@@ -19,6 +20,9 @@ up: ## Bring up infra (Redpanda, Postgres/PostGIS, Timescale, Neo4j, MinIO, Keyc
 
 up-app: ## Infra + API + console (compose profile `app`, builds images)
 	$(COMPOSE_APP) up -d --build
+
+up-stream: ## Infra + app + Redpanda risk-engine consumer (profile `stream`)
+	$(COMPOSE_STREAM) up -d --build
 
 down: ## Tear down infra
 	$(COMPOSE) down

@@ -3,7 +3,16 @@ name = "verge-risk-engine"
 version = "0.3.0"
 description = "Compound Risk Engine + sensor-health plane. LLM-independent (P1)."
 requires-python = ">=3.11"
-dependencies = ["verge-schema", "verge-forecaster", "pyyaml>=6.0"]
+dependencies = [
+  "verge-schema",
+  "verge-forecaster",
+  "verge-twin",
+  "verge-permit",
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+redpanda = ["confluent-kafka>=2.5"]
 
 [build-system]
 requires = ["hatchling"]
@@ -15,3 +24,5 @@ packages = ["verge_risk"]
 [tool.uv.sources]
 verge-schema = { workspace = true }
 verge-forecaster = { workspace = true }
+verge-twin = { workspace = true }
+verge-permit = { workspace = true }

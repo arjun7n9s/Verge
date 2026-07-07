@@ -140,6 +140,21 @@ services:
       verge-api:
         condition: service_healthy
 
+  verge-risk-engine:
+    profiles: ["stream"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.risk-engine
+    environment:
+      REDPANDA_BROKERS: redpanda:9092
+      VERGE_EVENTS_TOPIC: verge.events
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      verge-api:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
   tsdata:
