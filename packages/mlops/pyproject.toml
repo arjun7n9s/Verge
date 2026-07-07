@@ -18,3 +18,4 @@ artifacts = ["joblib>=1.4"]
 [tool.hatch.build.targets.wheel.force-include]
 "verge_mlops/samples/demo-registry.json" = "verge_mlops/samples/demo-registry.json"
 "verge_mlops/samples/models/compound-risk-1.2.0.pkl" = "verge_mlops/samples/models/compound-risk-1.2.0.pkl"
+"verge_mlops/samples/models/compound-risk-1.3.0-rc1.pkl" = "verge_mlops/samples/models/compound-risk-1.3.0-rc1.pkl"

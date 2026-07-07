@@ -14,6 +14,7 @@ from .artifacts import (
     sha256_file,
     verify_artifact,
 )
+from .canary import parse_canary_zones
 from .drift import (
     MODERATE,
     SIGNIFICANT,
@@ -42,6 +43,7 @@ def demo_registry() -> ModelRegistry:
 
 
 __all__ = [
+    "parse_canary_zones",
     "ArtifactError",
     "artifact_root",
     "load_sklearn_bundle",
