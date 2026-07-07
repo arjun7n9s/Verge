@@ -7,6 +7,8 @@ RiskFindings with full source lineage.
 
 from __future__ import annotations
 
+import os
+
 from verge_forecaster import forecast
 from verge_schema.core import Reading
 from verge_schema.enums import EstimateQuality, FindingState, LeadTimeBand
@@ -86,6 +88,15 @@ def _zone_ids(ctx: RiskContext) -> list[str]:
     return sorted({s.zone_id for s in ctx.sensors.values()})
 
 
+def _graph_incomplete(zone_id: str) -> bool:
+    if os.environ.get("VERGE_NEO4J_GRAPH_QUERY", "").lower() not in ("1", "true", "yes"):
+        return False
+    from verge_twin.neo4j_query import zone_graph_coverage
+
+    cov = zone_graph_coverage(zone_id)
+    return bool(cov.get("degraded") or cov.get("coveragePct", 100) < 80)
+
+
 def _degraded_sensors(zv: ZoneView, signals: list[ContributingSignal]) -> list[str]:
     bad: list[str] = []
     for sig in signals:
@@ -135,6 +146,7 @@ def evaluate(ctx: RiskContext, rules: list[Rule]) -> list[RiskFinding]:
                 confidence *= 0.7  # down-weight findings resting on bad data (§4.7)
 
             seq += 1
+            graph_incomplete = _graph_incomplete(zone_id)
             findings.append(
                 RiskFinding(
                     finding_id=f"F-{ctx.now:%Y%m%dT%H%M%S}-{seq:03d}",
@@ -151,6 +163,7 @@ def evaluate(ctx: RiskContext, rules: list[Rule]) -> list[RiskFinding]:
                     confidence_degraded_by=degraded_by,
                     counterfactual=_counterfactual(signals),
                     lineage=[f"{s.kind}:{s.ref_id}" for s in signals],
+                    graph_incomplete=graph_incomplete,
                 )
             )
     return findings

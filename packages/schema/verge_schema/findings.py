@@ -53,6 +53,10 @@ class RiskFinding(VergeModel):
     # alarm system; recorded and hash-chained, but not surfaced as a live alert.
     shadow: bool = False
 
+    # Knowledge graph coverage (spec §10.6): True when Neo4j/graph adjacency was
+    # unavailable and the finding used sensor-only rules.
+    graph_incomplete: bool = False
+
 
 class FindingEvent(VergeModel):
     """An append-only lifecycle transition. Hash-chains into AuditEntry (spec 4.5)."""
