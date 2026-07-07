@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 
 from . import STARTER_RULES, load_rules
@@ -117,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
         "detectors": detectors,
         "shadow": args.shadow,
         "event_hook": on_event if args.post else None,
+        "enable_cep": os.environ.get("VERGE_CEP", "true").lower() in ("1", "true", "yes"),
+        "enable_ml": os.environ.get("VERGE_ML_LAYER", "").lower() in ("1", "true", "yes"),
     }
 
     if args.redpanda:

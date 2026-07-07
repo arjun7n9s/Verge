@@ -13,6 +13,7 @@ dependencies = [
 
 [project.optional-dependencies]
 redpanda = ["confluent-kafka>=2.5"]
+ml = ["scikit-learn>=1.5", "numpy>=1.26"]
 
 [build-system]
 requires = ["hatchling"]

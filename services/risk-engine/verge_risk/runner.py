@@ -99,6 +99,8 @@ def run_stream(
     min_confidence: float = 0.8,
     window: int = WINDOW,
     event_hook: Callable[[dict], None] | None = None,
+    enable_cep: bool = False,
+    enable_ml: bool = False,
 ) -> int:
     """Drive the engine over a live stream. Runs the gas rules plus any injected
     detectors (e.g. SIMOPS), emits each qualifying finding once (deduped by zone
@@ -108,6 +110,11 @@ def run_stream(
 
     detectors = detectors or []
     state = StreamState(thresholds, window=window)
+    cep_state = None
+    if enable_cep:
+        from .cep import CepState, evaluate_cep
+
+        cep_state = CepState()
     seen: set[tuple[str, tuple[str, ...]]] = set()
     emitted = 0
     for e in events:
@@ -120,6 +127,12 @@ def run_stream(
         findings = list(evaluate(state.context(), rules))
         for detect in detectors:
             findings.extend(detect(state))
+        if enable_cep and cep_state is not None and kind == "reading":
+            findings.extend(evaluate_cep(cep_state, e, now=state.now))
+        if enable_ml and kind == "reading":
+            from .ml_layer import ml_findings
+
+            findings.extend(ml_findings(state))
         for f in findings:
             if f.confidence < min_confidence:
                 continue
