@@ -1,0 +1,19 @@
+# Verge replay feed — JSONL → Redpanda (completes sim → bus → risk-engine loop).
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+COPY packages packages
+COPY services services
+COPY eval eval
+RUN uv sync --frozen --no-dev --package verge-edge-gateway --extra kafka
+
+FROM python:3.12-slim-bookworm
+WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
+COPY --from=builder /app/.venv /app/.venv
+COPY eval eval
+ENV VERGE_REPLAY_JSONL=eval/replays/vizag-2025-01/events.jsonl \
+    VERGE_EVENTS_TOPIC=verge.events \
+    VERGE_REPLAY_REALTIME=30
+CMD ["sh", "-c", "while true; do python -m verge_edge.replay_producer \"${VERGE_REPLAY_JSONL}\" --brokers \"${REDPANDA_BROKERS:-redpanda:9092}\" --topic \"${VERGE_EVENTS_TOPIC}\" --realtime \"${VERGE_REPLAY_REALTIME}\"; sleep 10; done"]

@@ -155,6 +155,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  verge-replay-feed:
+    profiles: ["stream"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.replay-feed
+    environment:
+      REDPANDA_BROKERS: redpanda:9092
+      VERGE_EVENTS_TOPIC: verge.events
+      VERGE_REPLAY_JSONL: eval/replays/vizag-2025-01/events.jsonl
+      VERGE_REPLAY_REALTIME: "30"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
   tsdata:

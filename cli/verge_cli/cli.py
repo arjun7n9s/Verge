@@ -304,7 +304,22 @@ def _cmd_sim(args) -> int:
     argv = ["--scenario", args.scenario]
     if args.mqtt:
         argv += ["--mqtt", args.mqtt]
+    if args.redpanda:
+        argv += ["--redpanda", args.redpanda, "--topic", args.topic]
+    if args.realtime:
+        argv += ["--realtime", str(args.realtime)]
     return sim_main(argv)
+
+
+def _cmd_publish(args) -> int:
+    from verge_edge.replay_producer import publish_jsonl
+
+    return publish_jsonl(
+        args.file,
+        brokers=args.brokers,
+        topic=args.topic,
+        realtime=args.realtime,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -328,7 +343,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_sim = sub.add_parser("sim", help="run a plant simulator")
     p_sim.add_argument("--scenario", default="vizag-like")
     p_sim.add_argument("--mqtt")
+    p_sim.add_argument("--redpanda", metavar="BROKERS", help="publish to Redpanda")
+    p_sim.add_argument("--topic", default="verge.events")
+    p_sim.add_argument("--realtime", type=float, default=0.0)
     p_sim.set_defaults(func=_cmd_sim)
+
+    p_pub = sub.add_parser("publish", help="publish a JSONL replay file to Redpanda")
+    p_pub.add_argument("file", help="canonical events JSONL")
+    p_pub.add_argument("--brokers", default="localhost:19092")
+    p_pub.add_argument("--topic", default="verge.events")
+    p_pub.add_argument("--realtime", type=float, default=0.0)
+    p_pub.set_defaults(func=_cmd_publish)
 
     # --- commissioning workflow (spec §14.5) ---
     p_plant = sub.add_parser("plant", help="commission a plant layout")
