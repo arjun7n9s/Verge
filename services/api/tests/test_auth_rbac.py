@@ -44,6 +44,20 @@ def test_authorize_admin_backup_route() -> None:
     )
 
 
+def test_authorize_admin_audit_anchor_post() -> None:
+    with pytest.raises(HTTPException):
+        authorize(
+            "POST",
+            "/api/ops/audit/anchor",
+            {"realm_access": {"roles": ["verge-operator"]}},
+        )
+    authorize(
+        "POST",
+        "/api/ops/audit/anchor",
+        {"realm_access": {"roles": ["verge-admin"]}},
+    )
+
+
 def test_decode_bearer_rejects_without_jwks(monkeypatch) -> None:
     monkeypatch.setenv("VERGE_AUTH_ENABLED", "true")
     monkeypatch.setenv("KEYCLOAK_URL", "http://invalid.local")

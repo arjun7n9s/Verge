@@ -16,6 +16,7 @@ ROLE_ADMIN = frozenset({"verge-admin"})
 
 _ADMIN_PREFIXES = (
     "/api/ops/backup",
+    "/api/ops/audit/anchor",
     "/api/evidence/export",
 )
 

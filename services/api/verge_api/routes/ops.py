@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from ..audit_anchor import anchor_audit_head, verify_anchored_head
 from ..backup import snapshot_audit, verify_snapshot
 from ..ops import ops_snapshot
 
@@ -42,3 +43,15 @@ def ops_backup_verify(snapshot: dict) -> dict:
     internal consistency)."""
     expected_head = snapshot.get("expectedHead")
     return verify_snapshot(snapshot, expected_head=expected_head)
+
+
+@router.get("/ops/audit/anchor")
+def ops_audit_anchor_status(request: Request) -> dict:
+    """Compare live audit head against the last signed anchor in object storage."""
+    return verify_anchored_head(request.app.state.store)
+
+
+@router.post("/ops/audit/anchor")
+def ops_audit_anchor(request: Request) -> dict:
+    """Sign and upload the current audit head to MinIO (admin)."""
+    return anchor_audit_head(request.app.state.store)

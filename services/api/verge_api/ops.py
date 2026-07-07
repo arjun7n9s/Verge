@@ -69,6 +69,12 @@ def _vision_health(vision) -> dict:
         return {"backend": backend, "degraded": True, "reason": f"probe failed: {exc}"}
 
 
+def _audit_anchor_status(store, env: Mapping[str, str]) -> dict:
+    from .audit_anchor import verify_anchored_head
+
+    return verify_anchored_head(store, env=dict(env))
+
+
 def ops_snapshot(
     *,
     store,
@@ -97,6 +103,7 @@ def ops_snapshot(
             "entries": store.audit_len(),
             "head": store.audit_head(),
             "verified": bool(store.audit_verify()),
+            "anchor": _audit_anchor_status(store, env),
         },
         "findings": {"total": len(store.list_findings(shadow=None))},
         "sensorHealth": {
@@ -149,6 +156,10 @@ def render_prometheus(snap: dict) -> str:
     _metric(lines, "verge_audit_entries", snap["audit"]["entries"], "Audit chain entries")
     _metric(lines, "verge_audit_verified", int(snap["audit"]["verified"]),
             "Audit chain integrity (1 ok, 0 broken)")
+    anchor = snap["audit"].get("anchor") or {}
+    if anchor.get("matches") is not None:
+        _metric(lines, "verge_audit_anchor_matches", int(anchor["matches"]),
+                "Anchored audit head matches live chain (1 ok, 0 drift)")
     _metric(lines, "verge_findings_total", snap["findings"]["total"], "Findings on record")
     _metric(lines, "verge_ingest_sensors", snap["ingest"]["sensors"], "Distinct sensors seen")
     _metric(lines, "verge_ingest_readings", snap["ingest"]["readings"], "Buffered reading points")

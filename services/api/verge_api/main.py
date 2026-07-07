@@ -89,9 +89,22 @@ async def _lifespan(app: FastAPI):
             with contextlib.suppress(Exception):
                 drain_outbox(app)
 
+    async def _anchor_loop() -> None:
+        if os.environ.get("VERGE_AUDIT_AUTO_ANCHOR", "").lower() not in {"1", "true", "yes"}:
+            return
+        interval = float(os.environ.get("VERGE_AUDIT_ANCHOR_INTERVAL_S", "300"))
+        from .audit_anchor import anchor_audit_head
+
+        while True:
+            await asyncio.sleep(interval)
+            with contextlib.suppress(Exception):
+                anchor_audit_head(app.state.store)
+
     outbox_task = asyncio.create_task(_outbox_loop())
+    anchor_task = asyncio.create_task(_anchor_loop())
     yield
     outbox_task.cancel()
+    anchor_task.cancel()
     if stop is not None:
         stop.set()
 
