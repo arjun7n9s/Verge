@@ -26,6 +26,9 @@ spec:
           envFrom:
             - configMapRef:
                 name: verge-config
+            - secretRef:
+                name: verge-secrets
+                optional: true
           resources:
             requests:
               cpu: 250m

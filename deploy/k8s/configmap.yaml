@@ -18,3 +18,10 @@ data:
   KEYCLOAK_AUDIENCE: verge-console
   VERGE_CORS_ORIGINS: https://console.verge.local
   VERGE_COGNEE_ENABLED: "false"
+  MINIO_ENDPOINT: minio:9000
+  MINIO_BUCKET_AUDIT: verge-audit
+  MINIO_BUCKET_EVIDENCE: verge-evidence
+  MINIO_USE_SSL: "false"
+  VERGE_AUDIT_AUTO_ANCHOR: "true"
+  VERGE_AUDIT_ANCHOR_INTERVAL_S: "300"
+  VERGE_DEDUPE_STATE: /data/dedupe.json

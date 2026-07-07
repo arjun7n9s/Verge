@@ -1,0 +1,54 @@
+# Ingress + TLS skeleton for plant-IT console and API (cert-manager or manual secret).
+# Requires `verge-secrets` with tls.crt / tls.key when not using cert-manager.
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verge-console
+  namespace: verge
+  annotations:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - console.verge.local
+      secretName: verge-tls
+  rules:
+    - host: console.verge.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: verge-console
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verge-api
+  namespace: verge
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.verge.local
+      secretName: verge-tls
+  rules:
+    - host: api.verge.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: verge-api
+                port:
+                  number: 8000

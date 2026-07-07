@@ -14,6 +14,10 @@ Minimal manifests for air-gapped pilot installs. Pair with signed bundles
 | `console-deployment.yaml` | nginx static console |
 | `console-service.yaml` | ClusterIP :80 |
 | `risk-engine-deployment.yaml` | Redpanda consumer → API |
+| `network-policy.yaml` | Default-deny ingress + risk-engine egress |
+| `ingress-tls.yaml` | nginx Ingress + TLS skeleton |
+| `secret.example.yaml` | Secrets template (copy locally, never commit) |
+| `pod-disruption-budget.yaml` | PDB for API and risk-engine |
 
 ## Apply (pilot)
 

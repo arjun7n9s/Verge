@@ -1,0 +1,74 @@
+# Default-deny ingress for the OT-DMZ namespace; allow only declared paths.
+# External Postgres/Redpanda/MinIO live outside the cluster — egress is open
+# by default unless your CNI enforces a cluster-wide default-deny policy.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verge-api-ingress
+  namespace: verge
+spec:
+  podSelector:
+    matchLabels:
+      app: verge-api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: verge-console
+      ports:
+        - protocol: TCP
+          port: 8000
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verge-console-ingress
+  namespace: verge
+spec:
+  podSelector:
+    matchLabels:
+      app: verge-console
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verge-risk-engine-egress
+  namespace: verge
+spec:
+  podSelector:
+    matchLabels:
+      app: verge-risk-engine
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: verge-api
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Redpanda broker — adjust if external
+    - ports:
+        - protocol: TCP
+          port: 9092

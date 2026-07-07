@@ -24,6 +24,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: verge-config
+            - secretRef:
+                name: verge-secrets
+                optional: true
+          volumeMounts:
+            - name: dedupe-state
+              mountPath: /data
           resources:
             requests:
               cpu: 250m
@@ -45,3 +51,6 @@ spec:
             - verge.events
             - --post
             - http://verge-api:8000
+      volumes:
+        - name: dedupe-state
+          emptyDir: {}

@@ -124,6 +124,10 @@ services:
       VERGE_ML_CANARY_ZONES: ${VERGE_ML_CANARY_ZONES:-compound-risk:B-04,B-05}
       VERGE_OUTBOX_REDPANDA: ${VERGE_OUTBOX_REDPANDA:-true}
       VERGE_COGNEE_ENABLED: ${VERGE_COGNEE_ENABLED:-false}
+      VERGE_AUDIT_ANCHOR_SECRET: ${VERGE_AUDIT_ANCHOR_SECRET:-vergeverge}
+      VERGE_AUDIT_AUTO_ANCHOR: ${VERGE_AUDIT_AUTO_ANCHOR:-true}
+      VERGE_AUDIT_ANCHOR_INTERVAL_S: ${VERGE_AUDIT_ANCHOR_INTERVAL_S:-300}
+      MINIO_BUCKET_AUDIT: verge-audit
       AIMLAPI_API_KEY: ${AIMLAPI_API_KEY:-}
       SPEECHMATICS_API_KEY: ${SPEECHMATICS_API_KEY:-}
     depends_on:
@@ -167,6 +171,9 @@ services:
       VERGE_ML_LAYER: ${VERGE_ML_LAYER:-true}
       VERGE_ML_CANARY_ZONES: ${VERGE_ML_CANARY_ZONES:-compound-risk:B-04,B-05}
       VERGE_OUTBOX_REDPANDA: ${VERGE_OUTBOX_REDPANDA:-true}
+      VERGE_DEDUPE_STATE: /data/dedupe.json
+    volumes:
+      - risk-dedupe:/data
     depends_on:
       redpanda:
         condition: service_healthy
@@ -204,3 +211,4 @@ volumes:
   tsdata:
   neo4jdata:
   miniodata:
+  risk-dedupe:

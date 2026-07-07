@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verge-api
+  namespace: verge
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: verge-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verge-risk-engine
+  namespace: verge
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: verge-risk-engine
