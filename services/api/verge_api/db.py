@@ -94,6 +94,15 @@ sensor_reading = Table(
     Column("unit", String, nullable=True),
 )
 
+outbox_event = Table(
+    "outbox_event", metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("kind", String, index=True, nullable=False),
+    Column("payload", JSON, nullable=False),
+    Column("created_at", DateTime(timezone=True), index=True, nullable=False),
+    Column("published_at", DateTime(timezone=True), nullable=True, index=True),
+)
+
 
 def _boot_strategy(url: str) -> tuple[bool, bool]:
     """Return (use_migrate, use_create_all) for this URL and environment."""

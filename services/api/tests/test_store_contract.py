@@ -32,7 +32,7 @@ def store(request, tmp_path) -> StoreProtocol:
     # pg: ensure schema exists, then truncate for per-test isolation.
     engine = db.make_engine(_PG_URL)
     with engine.begin() as conn:
-        for tbl in ("finding", "finding_feedback", "audit_entry", "sensor_health"):
+        for tbl in ("finding", "finding_feedback", "audit_entry", "sensor_health", "outbox_event"):
             conn.execute(text(f"TRUNCATE TABLE {tbl} RESTART IDENTITY"))
     return SqlStore(_PG_URL)
 

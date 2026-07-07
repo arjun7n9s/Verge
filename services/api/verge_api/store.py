@@ -16,6 +16,8 @@ from verge_schema.enums import FindingState as S
 from verge_schema.findings import FindingFeedback, RiskFinding
 from verge_schema.lifecycle import transition
 
+from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED
+
 
 def _now() -> datetime:
     return datetime.now(UTC)
@@ -27,6 +29,7 @@ class InMemoryStore:
         self.feedback: list[FindingFeedback] = []
         self.audit = AuditChain()
         self.sensor_health: dict[DataQuality, int] = {DataQuality.LIVE: 0}
+        self._outbox: list[dict] = []
 
     # ── findings ──────────────────────────────────────────────────────────
     def add_finding(self, f: RiskFinding) -> RiskFinding:
@@ -35,6 +38,7 @@ class InMemoryStore:
             actor="risk-engine", kind="finding-created",
             payload={"findingId": f.finding_id, "title": f.title}, timestamp=f.created_at,
         )
+        self._outbox.append({"kind": FINDINGS_UPDATED, "payload": {"findingId": f.finding_id}})
         return f
 
     def get_finding(self, finding_id: str) -> RiskFinding | None:
@@ -72,6 +76,10 @@ class InMemoryStore:
         self.audit_append(actor=actor, kind="finding-event",
                           payload=ev.model_dump(by_alias=True, mode="json"),
                           timestamp=ev.timestamp)
+        self._outbox.append({
+            "kind": FINDING_TRANSITION,
+            "payload": {"findingId": finding_id, "to": to.value},
+        })
         return f
 
     # ── feedback (spec §4.6) ──────────────────────────────────────────────
@@ -119,6 +127,16 @@ class InMemoryStore:
             return True
         except Exception:
             return False
+
+    def outbox_pending(self) -> int:
+        return len(self._outbox)
+
+    def drain_outbox(self, publish, *, limit: int = 100) -> int:
+        batch = self._outbox[:limit]
+        for row in batch:
+            publish(row["kind"], row["payload"])
+        self._outbox = self._outbox[len(batch):]
+        return len(batch)
 
 
 # Back-compat alias: `Store` is the in-memory implementation.

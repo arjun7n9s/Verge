@@ -22,6 +22,7 @@ from verge_schema.findings import FindingFeedback, RiskFinding
 from verge_schema.lifecycle import transition
 
 from . import db
+from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED
 
 
 def _now() -> datetime:
@@ -72,12 +73,40 @@ class SqlStore:
             )
         conn.execute(stmt)
 
+    def _enqueue_outbox(
+        self, conn, kind: str, payload: dict, *, at: datetime | None = None,
+    ) -> None:
+        conn.execute(insert(db.outbox_event).values(
+            kind=kind,
+            payload=payload,
+            created_at=at or _now(),
+        ))
+
+    def _persist_audit(self, conn, entry) -> None:
+        ts_iso = entry.timestamp.isoformat() if isinstance(entry.timestamp, datetime) \
+            else str(entry.timestamp)
+        conn.execute(insert(db.audit_entry).values(
+            entry_id=entry.entry_id, ts=ts_iso, actor=entry.actor,
+            kind=entry.kind, payload=entry.payload, hash=entry.hash,
+            prev_hash=entry.prev_hash,
+        ))
+
     def add_finding(self, f: RiskFinding) -> RiskFinding:
-        # Idempotent on finding_id via dialect upsert (audit §4).
-        with self.engine.begin() as conn:
-            self._upsert_finding(conn, f)
-        self.audit_append("risk-engine", "finding-created",
-                          {"findingId": f.finding_id, "title": f.title}, f.created_at)
+        # Finding + audit + outbox in one transaction (audit §4 outbox pattern).
+        entry = self._chain.append(
+            actor="risk-engine",
+            kind="finding-created",
+            payload={"findingId": f.finding_id, "title": f.title},
+            timestamp=f.created_at,
+        )
+        try:
+            with self.engine.begin() as conn:
+                self._upsert_finding(conn, f)
+                self._persist_audit(conn, entry)
+                self._enqueue_outbox(conn, FINDINGS_UPDATED, {"findingId": f.finding_id})
+        except Exception:
+            self._chain = self._load_chain()
+            raise
         return f
 
     def get_finding(self, finding_id: str) -> RiskFinding | None:
@@ -124,12 +153,26 @@ class SqlStore:
         f.state = to.value
         if to in (S.ASSIGNED, S.IN_PROGRESS) and actor:
             f.owner = actor
-        with self.engine.begin() as conn:
-            conn.execute(update(db.finding).where(db.finding.c.finding_id == finding_id).values(
-                state=to.value, data=f.model_dump(by_alias=True, mode="json"),
-            ))
-        self.audit_append(actor, "finding-event",
-                          ev.model_dump(by_alias=True, mode="json"), ev.timestamp)
+        entry = self._chain.append(
+            actor=actor,
+            kind="finding-event",
+            payload=ev.model_dump(by_alias=True, mode="json"),
+            timestamp=ev.timestamp,
+        )
+        try:
+            with self.engine.begin() as conn:
+                conn.execute(update(db.finding).where(db.finding.c.finding_id == finding_id).values(
+                    state=to.value, data=f.model_dump(by_alias=True, mode="json"),
+                ))
+                self._persist_audit(conn, entry)
+                self._enqueue_outbox(
+                    conn,
+                    FINDING_TRANSITION,
+                    {"findingId": finding_id, "to": to.value},
+                )
+        except Exception:
+            self._chain = self._load_chain()
+            raise
         return f
 
     # ── feedback (spec §4.6) ──────────────────────────────────────────────
@@ -200,3 +243,29 @@ class SqlStore:
             return True
         except Exception:
             return False
+
+    def outbox_pending(self) -> int:
+        with self.engine.begin() as conn:
+            return conn.execute(
+                select(func.count()).select_from(db.outbox_event)
+                .where(db.outbox_event.c.published_at.is_(None))
+            ).scalar_one()
+
+    def drain_outbox(self, publish, *, limit: int = 100) -> int:
+        """Publish unpublished outbox rows; mark published in the same transaction."""
+        now = _now()
+        with self.engine.begin() as conn:
+            rows = conn.execute(
+                select(db.outbox_event)
+                .where(db.outbox_event.c.published_at.is_(None))
+                .order_by(db.outbox_event.c.id)
+                .limit(limit)
+            ).mappings().all()
+            for row in rows:
+                publish(row["kind"], row["payload"])
+                conn.execute(
+                    update(db.outbox_event)
+                    .where(db.outbox_event.c.id == row["id"])
+                    .values(published_at=now)
+                )
+        return len(rows)

@@ -8,6 +8,7 @@ the safety core and the API are not).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 from contextlib import asynccontextmanager
@@ -60,7 +61,7 @@ from .routes.voice import router as voice_router
 from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
 from .stream_bus import StreamBus
-from .stream_notify import notify_findings
+from .stream_notify import drain_outbox
 from .trace_middleware import TraceMiddleware
 
 
@@ -80,7 +81,16 @@ async def _lifespan(app: FastAPI):
     stop = start_redpanda_fanout(bus)
     app.state.stream_fanout_active = stop is not None
     app.state.stream_fanout_stop = stop
+
+    async def _outbox_loop() -> None:
+        while True:
+            await asyncio.sleep(0.25)
+            with contextlib.suppress(Exception):
+                drain_outbox(app)
+
+    outbox_task = asyncio.create_task(_outbox_loop())
     yield
+    outbox_task.cancel()
     if stop is not None:
         stop.set()
 
@@ -200,7 +210,7 @@ def ingest_finding(finding: RiskFinding, request: Request) -> dict:
     """Ingest a finding from the streaming risk-engine (the live path) so it
     appears on the console. Idempotent on finding_id."""
     store.add_finding(finding)
-    notify_findings(request.app)
+    drain_outbox(request.app)
     return finding.model_dump(by_alias=True, mode="json")
 
 
@@ -221,7 +231,7 @@ def transition_finding(finding_id: str, body: TransitionBody, request: Request) 
     except IllegalTransition as e:
         raise HTTPException(409, str(e)) from e
     maybe_ingest_closed_finding(f, to=body.to)
-    notify_findings(request.app)
+    drain_outbox(request.app)
     return f.model_dump(by_alias=True, mode="json")
 
 
