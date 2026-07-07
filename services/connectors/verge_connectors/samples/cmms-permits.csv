@@ -1,0 +1,4 @@
+permitId,kind,zoneId,equipmentId,validFrom,validTo
+PTW-1001,hot-work,B-04,charging-car-hydraulics,2025-01-14T05:30:00,2025-01-14T08:00:00
+PTW-1002,confined-space,B-05,,2025-01-14T06:00:00,2025-01-14T10:00:00
+PTW-1003,isolation,B-04,,2025-01-14T05:00:00,2025-01-14T07:00:00

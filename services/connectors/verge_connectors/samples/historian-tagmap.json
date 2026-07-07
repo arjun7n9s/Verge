@@ -1,0 +1,5 @@
+{
+  "COB4.LEL.PV":  { "sensorId": "LEL-04", "kind": "gas-lel", "unit": "%LEL", "zoneId": "B-04" },
+  "COB4.CO.PV":   { "sensorId": "CO-04",  "kind": "gas-co",  "unit": "ppm",  "zoneId": "B-04" },
+  "COB5.LEL.PV":  { "sensorId": "LEL-05", "kind": "gas-lel", "unit": "%LEL", "zoneId": "B-05" }
+}
