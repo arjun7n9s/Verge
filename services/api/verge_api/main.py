@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
@@ -42,6 +42,7 @@ from .routes.compliance import router as compliance_router
 from .routes.degradation import router as degradation_router
 from .routes.eval_report import router as eval_report_router
 from .routes.evidence import router as evidence_router
+from .routes.fatigue import router as fatigue_router
 from .routes.fleet import router as fleet_router
 from .routes.memory import router as memory_router
 from .routes.models import router as models_router
@@ -49,6 +50,7 @@ from .routes.ops import router as ops_router
 from .routes.permits import router as permits_router
 from .routes.plant import router as plant_router
 from .routes.plant_graph import router as plant_graph_router
+from .routes.plume import router as plume_router
 from .routes.readings import router as readings_router
 from .routes.reports import router as reports_router
 from .routes.stream import router as stream_router
@@ -58,6 +60,7 @@ from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
 from .stream_bus import StreamBus
 from .stream_notify import notify_findings
+from .trace_middleware import TraceMiddleware
 
 
 def _load_model_registry() -> ModelRegistry:
@@ -85,6 +88,7 @@ app = FastAPI(title="Verge API", version="0.3.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
+app.add_middleware(TraceMiddleware)
 app.add_middleware(AuthMiddleware)
 app.include_router(fleet_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
@@ -103,6 +107,8 @@ app.include_router(ops_router, prefix="/api")
 app.include_router(degradation_router, prefix="/api")
 app.include_router(permits_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
+app.include_router(fatigue_router, prefix="/api")
+app.include_router(plume_router, prefix="/api")
 app.include_router(stream_router, prefix="/api")
 
 # Backend from VERGE_STORE (memory default; sql persists). Seed only when empty
@@ -291,3 +297,25 @@ async def stream(request: Request) -> StreamingResponse:
             bus.unsubscribe(q)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+@app.websocket("/api/stream/ws")
+async def stream_ws(websocket: WebSocket) -> None:
+    """WebSocket fan-out sharing the same StreamBus as SSE (spec §2)."""
+    await websocket.accept()
+    bus: StreamBus = websocket.app.state.stream_bus
+    q = await bus.subscribe()
+    try:
+        findings = [f.model_dump(by_alias=True, mode="json") for f in store.list_findings()]
+        await websocket.send_json({"kind": "findings", "findings": findings})
+        while True:
+            try:
+                line = await asyncio.wait_for(q.get(), timeout=30.0)
+                payload = line.removeprefix("data: ").strip()
+                await websocket.send_text(payload)
+            except TimeoutError:
+                await websocket.send_json({"kind": "heartbeat"})
+    except WebSocketDisconnect:
+        pass
+    finally:
+        bus.unsubscribe(q)
