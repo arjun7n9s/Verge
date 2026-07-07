@@ -1,0 +1,37 @@
+{
+  "models": [
+    {
+      "model_id": "compound-risk-1.2.0",
+      "name": "compound-risk",
+      "version": "1.2.0",
+      "kind": "isolation-forest",
+      "stage": "production",
+      "metrics": {"recall": 0.91, "fpr": 0.06},
+      "artifact_ref": "models/compound-risk-1.2.0.pkl",
+      "notes": "Vizag-replay validated; promoted after 30-day shadow.",
+      "created_at": "2026-05-01T00:00:00+00:00"
+    },
+    {
+      "model_id": "compound-risk-1.3.0-rc1",
+      "name": "compound-risk",
+      "version": "1.3.0-rc1",
+      "kind": "isolation-forest",
+      "stage": "canary",
+      "metrics": {"recall": 0.93, "fpr": 0.05},
+      "artifact_ref": "models/compound-risk-1.3.0-rc1.pkl",
+      "notes": "Canary on B-04/B-05; watching drift before promotion.",
+      "created_at": "2026-06-20T00:00:00+00:00"
+    },
+    {
+      "model_id": "ppe-detector-0.9.0",
+      "name": "ppe-detector",
+      "version": "0.9.0",
+      "kind": "rt-detr",
+      "stage": "shadow",
+      "metrics": {"map50": 0.88},
+      "artifact_ref": "models/ppe-detector-0.9.0.pt",
+      "notes": "Vision plane; shadow only until GPU box commissioned.",
+      "created_at": "2026-06-25T00:00:00+00:00"
+    }
+  ]
+}
