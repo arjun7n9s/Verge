@@ -8,11 +8,14 @@ dependencies = [
     "verge-audit",
     "verge-llm",
     "verge-memory",
+    "verge-mlops",
     "verge-voice",
     "verge-risk-engine",
     "verge-orchestrator",
     "verge-permit",
     "verge-twin",
+    "verge-compliance",
+    "verge-vision",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
@@ -36,8 +39,11 @@ verge-schema = { workspace = true }
 verge-audit = { workspace = true }
 verge-llm = { workspace = true }
 verge-memory = { workspace = true }
+verge-mlops = { workspace = true }
 verge-voice = { workspace = true }
 verge-risk-engine = { workspace = true }
 verge-orchestrator = { workspace = true }
 verge-permit = { workspace = true }
 verge-twin = { workspace = true }
+verge-compliance = { workspace = true }
+verge-vision = { workspace = true }

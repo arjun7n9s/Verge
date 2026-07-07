@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import UTC, datetime
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from verge_llm import provider_from_env
+from verge_mlops import DEMO_REGISTRY, ModelRegistry
 from verge_orchestrator import respond
 from verge_risk.health import ribbon as health_ribbon  # noqa: F401 (kept in sync)
 from verge_schema.enums import FeedbackVerdict
@@ -24,21 +27,37 @@ from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
 from verge_twin import load_plant
 from verge_twin.plant import DEMO_PLANT
+from verge_vision import provider_from_env as vision_provider_from_env
 
 from .auth import AuthMiddleware
 from .evidence_store import upload_evidence_manifest
 from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
+from .ops import ops_snapshot, render_prometheus
+from .routes.alerts import router as alerts_router
+from .routes.compliance import router as compliance_router
 from .routes.evidence import router as evidence_router
 from .routes.fleet import router as fleet_router
 from .routes.memory import router as memory_router
+from .routes.models import router as models_router
+from .routes.ops import router as ops_router
 from .routes.permits import router as permits_router
 from .routes.plant import router as plant_router
 from .routes.readings import router as readings_router
 from .routes.reports import router as reports_router
+from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
 from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
+
+
+def _load_model_registry() -> ModelRegistry:
+    """A writable registry at VERGE_MODEL_REGISTRY, else the read-only demo."""
+    path = os.environ.get("VERGE_MODEL_REGISTRY")
+    if path and Path(path).exists():
+        return ModelRegistry(path)
+    return ModelRegistry.read_only(DEMO_REGISTRY)
+
 
 app = FastAPI(title="Verge API", version="0.3.0")
 app.add_middleware(
@@ -46,11 +65,16 @@ app.add_middleware(
 )
 app.add_middleware(AuthMiddleware)
 app.include_router(fleet_router, prefix="/api")
+app.include_router(alerts_router, prefix="/api")
+app.include_router(compliance_router, prefix="/api")
 app.include_router(evidence_router, prefix="/api")
 app.include_router(plant_router, prefix="/api")
 app.include_router(readings_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
+app.include_router(vision_router, prefix="/api")
+app.include_router(models_router, prefix="/api")
+app.include_router(ops_router, prefix="/api")
 app.include_router(permits_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 
@@ -61,6 +85,9 @@ app.state.store = store
 app.state.permits = make_permits_registry(store=store)
 llm = provider_from_env()
 app.state.llm = llm
+app.state.vision = vision_provider_from_env()
+app.state.model_registry = _load_model_registry()
+app.state.started_at = datetime.now(UTC)
 if not store.list_findings(shadow=None):
     seed(store)
 app.state.permits.seed_demo(datetime.now(UTC))
@@ -186,6 +213,17 @@ def respond_to_finding(finding_id: str) -> dict:
             "narrativeDegraded": r.report.narrative_degraded,
         },
     }
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> str:
+    """Prometheus scrape for plant IT (spec §14.6). Distinct from the operator
+    console; dependency-free text exposition format."""
+    snap = ops_snapshot(
+        store=store, readings=app.state.readings, llm=llm, vision=app.state.vision,
+        version=app.version, started_at=app.state.started_at,
+    )
+    return render_prometheus(snap)
 
 
 @app.get("/api/sensors/ribbon")

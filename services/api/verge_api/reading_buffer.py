@@ -115,6 +115,24 @@ class ReadingBuffer:
                 n += 1
         return n
 
+    def sensor_count(self) -> int:
+        """Number of distinct sensors seen (plant-IT ingest health, §14.6)."""
+        return len(self._by_sensor)
+
+    def reading_count(self) -> int:
+        """Total buffered reading points across all sensors."""
+        return sum(len(buf) for buf in self._by_sensor.values())
+
+    def latest_ts(self) -> str | None:
+        """ISO timestamp of the most recent buffered reading, or None if empty."""
+        latest: str | None = None
+        for buf in self._by_sensor.values():
+            if buf:
+                ts = buf[-1].get("ts")
+                if ts and (latest is None or ts > latest):
+                    latest = ts
+        return latest
+
     def sensor_ids_for_finding(self, finding: RiskFinding) -> list[str]:
         ids: list[str] = []
         seen: set[str] = set()
