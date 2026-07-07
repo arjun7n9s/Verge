@@ -1,7 +1,18 @@
 # Verge starter rule library (spec §14.5 step 3).
 # Known fatal combinations drawn from OISD standards, the CSB database, and the
 # public incident corpus. Plants adopt this and customize per zone; they do not
-# author from zero. ~30 rules ship in the full library; this is the core subset.
+# author from zero. 30+ rules ship in the full library.
+#
+# Two families below:
+#   * gas-LEL / gas-CO + hot-work / confined-space / changeover — the core coke-oven
+#     and process combinations exercised by the Vizag/BP-Texas/Jaipur replays.
+#   * broader OISD fatal combinations (toxic gases H2S/SO2/NH3/Cl2, oxygen
+#     enrichment, and non-gas permits: isolation/LOTO, work-at-height, radiography,
+#     excavation, electrical, line-breaking, hot-tapping, lifting, vessel entry).
+#
+# Plant-specific families (process-startup envelopes, tank-farm transfer) are
+# authored during commissioning against the site's own equipment, not shipped
+# here — so the compliance report honestly reports them as gaps until configured.
 
 - id: hot-work-elevated-gas-changeover
   name: Hot work + rising flammable gas during shift changeover
@@ -193,5 +204,226 @@
       sensor_kind: gas-lel
       pct: 0.25
       min_rise_per_min: 0.3
+  forecast:
+    sensor_kind: gas-lel
+
+# ── broader OISD fatal combinations (toxic gases + non-gas permits) ──────────
+# Every rule below keys on at least one hazard kind absent from the replay
+# datasets (toxic gas or a novel permit), so they extend coverage without
+# altering the replay-proven lead-time results.
+
+- id: hot-tapping-elevated-lel
+  name: Hot-tapping with flammable gas near threshold
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: permit_active
+      kind: hot-tapping
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.12
+  forecast:
+    sensor_kind: gas-lel
+
+- id: line-breaking-h2s-release
+  name: Line breaking with rising H2S
+  severity: critical
+  base_confidence: 0.88
+  all:
+    - type: permit_active
+      kind: line-breaking
+    - type: gas_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-h2s
+
+- id: confined-space-h2s
+  name: Confined-space entry with rising H2S
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: gas_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-h2s
+
+- id: confined-space-oxygen-enrichment
+  name: Confined-space entry with oxygen enrichment
+  severity: critical
+  base_confidence: 0.85
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: gas_near_threshold
+      sensor_kind: gas-o2
+      pct: 0.05
+  forecast:
+    sensor_kind: gas-o2
+
+- id: radiography-during-occupied-work
+  name: Radiography during simultaneous occupied work
+  severity: critical
+  base_confidence: 0.82
+  all:
+    - type: permit_active
+      kind: radiography
+    - type: permit_active
+      kind: confined-space
+
+- id: work-at-height-changeover
+  name: Work at height during shift changeover
+  severity: warning
+  base_confidence: 0.6
+  all:
+    - type: permit_active
+      kind: work-at-height
+    - type: shift_changeover
+
+- id: excavation-services-changeover
+  name: Excavation near buried services during changeover
+  severity: warning
+  base_confidence: 0.6
+  all:
+    - type: permit_active
+      kind: excavation
+    - type: shift_changeover
+
+- id: electrical-live-work-flammable-gas
+  name: Live electrical work near flammable gas (ignition source)
+  severity: critical
+  base_confidence: 0.88
+  all:
+    - type: permit_active
+      kind: electrical
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-lel
+
+- id: isolation-breach-flammable
+  name: Energy isolation with rising flammable gas (isolation breach)
+  severity: critical
+  base_confidence: 0.86
+  all:
+    - type: permit_active
+      kind: isolation
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+      min_rise_per_min: 0.5
+  forecast:
+    sensor_kind: gas-lel
+
+- id: cold-work-adjacent-hot-work
+  name: Cold work adjacent to active hot work
+  severity: warning
+  base_confidence: 0.65
+  all:
+    - type: permit_active
+      kind: cold-work
+    - type: permit_active
+      kind: hot-work
+
+- id: ammonia-release-changeover
+  name: Ammonia release during shift changeover
+  severity: warning
+  base_confidence: 0.68
+  all:
+    - type: gas_near_threshold
+      sensor_kind: gas-nh3
+      pct: 0.20
+    - type: shift_changeover
+  forecast:
+    sensor_kind: gas-nh3
+
+- id: chlorine-confined-space
+  name: Confined-space entry with rising chlorine
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: gas_near_threshold
+      sensor_kind: gas-cl2
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-cl2
+
+- id: so2-exposure-hot-work
+  name: Hot work with rising SO2 exposure
+  severity: critical
+  base_confidence: 0.8
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: gas_near_threshold
+      sensor_kind: gas-so2
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-so2
+
+- id: benzene-exposure-changeover
+  name: Benzene exposure during shift changeover
+  severity: warning
+  base_confidence: 0.66
+  all:
+    - type: gas_near_threshold
+      sensor_kind: gas-benzene
+      pct: 0.20
+    - type: shift_changeover
+  forecast:
+    sensor_kind: gas-benzene
+
+- id: vessel-entry-toxic-h2s
+  name: Vessel entry with rising H2S
+  severity: critical
+  base_confidence: 0.89
+  all:
+    - type: permit_active
+      kind: vessel-entry
+    - type: gas_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.18
+  forecast:
+    sensor_kind: gas-h2s
+
+- id: hot-work-oxygen-enrichment
+  name: Hot work in an oxygen-enriched atmosphere
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: gas_near_threshold
+      sensor_kind: gas-o2
+      pct: 0.05
+  forecast:
+    sensor_kind: gas-o2
+
+- id: lifting-over-live-plant-changeover
+  name: Crane lift over live plant during shift changeover
+  severity: warning
+  base_confidence: 0.6
+  all:
+    - type: permit_active
+      kind: lifting
+    - type: shift_changeover
+
+- id: multi-gas-h2s-lel-convergence
+  name: Converging H2S and flammable gas (multi-gas)
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: gas_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.25
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.25
   forecast:
     sensor_kind: gas-lel
