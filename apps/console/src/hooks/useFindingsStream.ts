@@ -21,6 +21,13 @@ export function useFindingsStream(
       onMessage: (data) => {
         if (Array.isArray(data)) {
           onFindingsRef.current(data as RiskFinding[]);
+          return;
+        }
+        if (data && typeof data === 'object' && 'kind' in data) {
+          const envelope = data as { kind?: string; findings?: RiskFinding[] };
+          if (envelope.kind === 'findings' && Array.isArray(envelope.findings)) {
+            onFindingsRef.current(envelope.findings);
+          }
         }
       },
       onError: () => {

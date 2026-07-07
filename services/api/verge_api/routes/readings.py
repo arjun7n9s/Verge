@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from ..stream_notify import notify_reading
 from ..timescale_writer import maybe_write_timescale
 
 router = APIRouter(tags=["readings"])
@@ -27,6 +28,7 @@ def ingest_reading(body: ReadingIngestBody, request: Request) -> dict:
     payload = body.model_dump()
     buf.ingest(payload)
     maybe_write_timescale(payload)
+    notify_reading(request.app, payload)
     return {"ok": True, "sensorId": body.sensorId}
 
 

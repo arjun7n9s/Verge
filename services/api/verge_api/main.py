@@ -10,10 +10,11 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
@@ -34,6 +35,7 @@ from .evidence_store import upload_evidence_manifest
 from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
 from .ops import ops_snapshot, render_prometheus
+from .redpanda_fanout import start_redpanda_fanout
 from .routes.alerts import router as alerts_router
 from .routes.commission import router as commission_router
 from .routes.compliance import router as compliance_router
@@ -49,10 +51,13 @@ from .routes.plant import router as plant_router
 from .routes.plant_graph import router as plant_graph_router
 from .routes.readings import router as readings_router
 from .routes.reports import router as reports_router
+from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
 from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
+from .stream_bus import StreamBus
+from .stream_notify import notify_findings
 
 
 def _load_model_registry() -> ModelRegistry:
@@ -63,7 +68,20 @@ def _load_model_registry() -> ModelRegistry:
     return ModelRegistry.read_only(DEMO_REGISTRY)
 
 
-app = FastAPI(title="Verge API", version="0.3.0")
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    bus = StreamBus()
+    app.state.stream_bus = bus
+    bus.bind_loop(asyncio.get_running_loop())
+    stop = start_redpanda_fanout(bus)
+    app.state.stream_fanout_active = stop is not None
+    app.state.stream_fanout_stop = stop
+    yield
+    if stop is not None:
+        stop.set()
+
+
+app = FastAPI(title="Verge API", version="0.3.0", lifespan=_lifespan)
 app.add_middleware(
     CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
 )
@@ -85,6 +103,7 @@ app.include_router(ops_router, prefix="/api")
 app.include_router(degradation_router, prefix="/api")
 app.include_router(permits_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
+app.include_router(stream_router, prefix="/api")
 
 # Backend from VERGE_STORE (memory default; sql persists). Seed only when empty
 # so a durable store keeps its history across restarts.
@@ -149,10 +168,11 @@ def shadow_summary() -> dict:
 
 
 @app.post("/api/findings")
-def ingest_finding(finding: RiskFinding) -> dict:
+def ingest_finding(finding: RiskFinding, request: Request) -> dict:
     """Ingest a finding from the streaming risk-engine (the live path) so it
     appears on the console. Idempotent on finding_id."""
     store.add_finding(finding)
+    notify_findings(request.app)
     return finding.model_dump(by_alias=True, mode="json")
 
 
@@ -165,7 +185,7 @@ def get_finding(finding_id: str) -> dict:
 
 
 @app.post("/api/findings/{finding_id}/transition")
-def transition_finding(finding_id: str, body: TransitionBody) -> dict:
+def transition_finding(finding_id: str, body: TransitionBody, request: Request) -> dict:
     if store.get_finding(finding_id) is None:
         raise HTTPException(404, "finding not found")
     try:
@@ -173,6 +193,7 @@ def transition_finding(finding_id: str, body: TransitionBody) -> dict:
     except IllegalTransition as e:
         raise HTTPException(409, str(e)) from e
     maybe_ingest_closed_finding(f, to=body.to)
+    notify_findings(request.app)
     return f.model_dump(by_alias=True, mode="json")
 
 
@@ -247,14 +268,26 @@ def audit(limit: int = 50) -> list[dict]:
 
 
 @app.get("/api/stream")
-async def stream() -> StreamingResponse:
-    """Server-Sent Events: push the current findings snapshot every 2s. A real
-    deployment fans out from Redpanda; this is enough for the console + demo."""
+async def stream(request: Request) -> StreamingResponse:
+    """Server-Sent Events: push findings on change; optional Redpanda fan-out
+    forwards canonical events when ``VERGE_STREAM_FANOUT`` is set."""
+
+    bus: StreamBus = request.app.state.stream_bus
 
     async def gen():
-        while True:
-            payload = [f.model_dump(by_alias=True, mode="json") for f in store.list_findings()]
-            yield f"data: {json.dumps(payload)}\n\n"
-            await asyncio.sleep(2.0)
+        q = await bus.subscribe()
+        try:
+            findings = [
+                f.model_dump(by_alias=True, mode="json") for f in store.list_findings()
+            ]
+            yield f"data: {json.dumps({'kind': 'findings', 'findings': findings})}\n\n"
+            while True:
+                try:
+                    line = await asyncio.wait_for(q.get(), timeout=30.0)
+                    yield line
+                except TimeoutError:
+                    yield ": heartbeat\n\n"
+        finally:
+            bus.unsubscribe(q)
 
     return StreamingResponse(gen(), media_type="text/event-stream")
