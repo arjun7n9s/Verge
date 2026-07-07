@@ -2,6 +2,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useFindingsStore } from '@/stores/findings';
 import { useConnectionStore } from '@/stores/connection';
 import { SensorRibbon } from '@/components/organisms/SensorRibbon';
+import { DegradationBannerStrip } from '@/components/organisms/DegradationBannerStrip';
 import { Shield, Activity, BarChart2, Settings, History, ArrowRightLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -168,6 +169,8 @@ export default function AppShell() {
 
       {/* Sensor health ribbon */}
       <SensorRibbon />
+
+      <DegradationBannerStrip />
 
       {/* Shadow banner warning */}
       {shadow && (

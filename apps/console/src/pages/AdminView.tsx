@@ -2,6 +2,9 @@ import { AlertFatigueMetrics } from '@/components/organisms/AlertFatigueMetrics'
 import { ThresholdConfig } from '@/components/organisms/ThresholdConfig';
 import { RulesEditor } from '@/components/organisms/RulesEditor';
 import { MemoryStatusPanel } from '@/components/organisms/MemoryStatusPanel';
+import { OpsStatusPanel } from '@/components/organisms/OpsStatusPanel';
+import { CompliancePanel } from '@/components/organisms/CompliancePanel';
+import { ModelRegistryPanel } from '@/components/organisms/ModelRegistryPanel';
 
 export default function AdminView() {
   return (
@@ -20,6 +23,12 @@ export default function AdminView() {
       <AlertFatigueMetrics />
 
       <MemoryStatusPanel />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <OpsStatusPanel />
+        <CompliancePanel />
+        <ModelRegistryPanel />
+      </div>
 
       {/* Configuration Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

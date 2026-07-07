@@ -7,8 +7,9 @@ import {
   AlertTriangle,
   Languages,
 } from 'lucide-react';
-import { transitionFinding, respondToFinding } from '@/api';
+import { transitionFinding } from '@/api';
 import { getAlertPreview } from '@/api/intelligence';
+import { dispatchAlert } from '@/api/platform';
 
 interface ResponseOrchestratorProps {
   activeFindings: RiskFinding[];
@@ -53,7 +54,7 @@ export function ResponseOrchestratorPanel({ activeFindings, onChange }: Response
   
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['sms', 'app']);
   const [selectedTarget, setSelectedTarget] = useState<'role' | 'zone' | 'all'>('zone');
-  const [targetRole, _setTargetRole] = useState('zone-crew');
+  const [_targetRole, _setTargetRole] = useState('zone-crew');
   const [lang, setLang] = useState('en');
   const [template, setTemplate] = useState('gas-leak');
   const [customText, setCustomText] = useState('');
@@ -103,21 +104,37 @@ export function ResponseOrchestratorPanel({ activeFindings, onChange }: Response
   const handleDispatch = async () => {
     setIsSending(true);
     try {
-      const response = await respondToFinding(trigger.findingId);
+      const channels = ['console', ...selectedChannels];
+      const receipt = await dispatchAlert(trigger.findingId, {
+        approvedBy: 'Shift Supervisor Sarah',
+        channels,
+        action: getMessageBody(),
+        languages: [lang],
+      });
+
+      if (receipt.refused) {
+        setDeliveryStatus([
+          {
+            name: 'Dispatch refused',
+            channel: 'policy',
+            status: receipt.reason ?? 'Approver required (P8)',
+          },
+        ]);
+        return;
+      }
 
       await transitionFinding(
         trigger.findingId,
         'escalated',
-        `Emergency alerts drafted for ${selectedTarget === 'all' ? 'All Personnel' : selectedTarget === 'role' ? targetRole : trigger.zoneId} via ${selectedChannels.join(', ')}`,
+        `Emergency alerts dispatched for ${trigger.zoneId} via ${channels.join(', ')}`,
         'emergency-dispatch',
       );
 
-      const langs = (response.alert.languages as string[] | undefined) ?? ['en'];
       setDeliveryStatus(
-        langs.map((code) => ({
-          name: `Advisory draft (${code.toUpperCase()})`,
-          channel: selectedChannels.join('/') || 'orchestrator',
-          status: response.report.narrativeDegraded ? 'Degraded narrative' : 'Draft ready',
+        (receipt.results ?? []).map((c) => ({
+          name: c.channel.toUpperCase(),
+          channel: c.channel,
+          status: c.delivered ? 'Delivered' : c.degraded ? `Degraded: ${c.reason ?? ''}` : 'Pending',
         })),
       );
 

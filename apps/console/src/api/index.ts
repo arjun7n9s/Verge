@@ -31,5 +31,24 @@ export { getFindingTelemetry } from './telemetry';
 export type { FindingTelemetry, TelemetrySeries, TelemetryPoint } from './telemetry';
 export { getMemoryStatus, getAlertPreview, getEvidenceManifest } from './intelligence';
 export type { MemoryStatus, AlertPreview, EvidenceManifest } from './intelligence';
+export {
+  getDegradationStatus,
+  getOpsStatus,
+  getComplianceGaps,
+  getComplianceReport,
+  getModelRegistry,
+  dispatchAlert,
+} from './platform';
+export type {
+  DegradationBanner,
+  DegradationStatus,
+  OpsStatus,
+  ComplianceGap,
+  ComplianceGaps,
+  ComplianceReport,
+  ModelCard,
+  ModelRegistry,
+  AlertDispatchReceipt,
+} from './platform';
 export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';
