@@ -23,6 +23,7 @@ from verge_schema.core import Permit, Reading, Sensor
 from verge_schema.findings import RiskFinding
 
 from .context import RiskContext
+from .dedupe_store import DedupeStore
 from .rules import Rule
 
 DEFAULT_THRESHOLDS = {"gas-lel": 100.0, "gas-co": 50.0}
@@ -117,12 +118,15 @@ def run_stream(
     enable_cep: bool = False,
     enable_ml: bool = False,
     validate_contracts: bool = True,
+    dedupe: DedupeStore | None = None,
 ) -> int:
     """Drive the engine over a live stream. Runs the gas rules plus any injected
     detectors (e.g. SIMOPS), emits each qualifying finding once (deduped by zone
     + lineage + source event id), and tags findings shadow when running alongside
     an existing alarm system (spec §14.5). Returns the number emitted."""
     from .engine import evaluate  # local import avoids a cycle at module load
+
+    dedupe = dedupe if dedupe is not None else DedupeStore.from_env()
 
     if validate_contracts:
         from verge_contracts.envelope import validate_and_enrich
@@ -134,45 +138,47 @@ def run_stream(
         from .cep import CepState, evaluate_cep
 
         cep_state = CepState()
-    seen: set[tuple[str, tuple[str, ...]]] = set()
     emitted = 0
-    for raw in events:
-        e = raw
-        if validate_contracts:
-            try:
-                e = validate_and_enrich(raw, trace_id=raw.get("traceId"))
-            except Exception:
+    try:
+        for raw in events:
+            e = raw
+            if validate_contracts:
+                try:
+                    e = validate_and_enrich(raw, trace_id=raw.get("traceId"))
+                except Exception:
+                    continue
+            kind = state.ingest(e)
+            if event_hook is not None:
+                event_hook(e)
+            # readings and permits both change the risk picture; re-evaluate on either.
+            if kind not in ("reading", "permit"):
+                if after_event is not None:
+                    after_event(e)
                 continue
-        kind = state.ingest(e)
-        if event_hook is not None:
-            event_hook(e)
-        # readings and permits both change the risk picture; re-evaluate on either.
-        if kind not in ("reading", "permit"):
+            findings = list(evaluate(state.context(), rules))
+            for detect in detectors:
+                findings.extend(detect(state))
+            if enable_cep and cep_state is not None and kind == "reading":
+                findings.extend(evaluate_cep(cep_state, e, now=state.now))
+            if enable_ml and kind == "reading":
+                from .ml_layer import ml_findings
+
+                findings.extend(ml_findings(state))
+            for f in findings:
+                if f.confidence < min_confidence:
+                    continue
+                key = (f.zone_id, tuple(sorted(f.lineage)))
+                if dedupe.seen(key):
+                    continue
+                dedupe.remember(key)
+                if shadow:
+                    f.shadow = True
+                sink(f)
+                emitted += 1
             if after_event is not None:
                 after_event(e)
-            continue
-        findings = list(evaluate(state.context(), rules))
-        for detect in detectors:
-            findings.extend(detect(state))
-        if enable_cep and cep_state is not None and kind == "reading":
-            findings.extend(evaluate_cep(cep_state, e, now=state.now))
-        if enable_ml and kind == "reading":
-            from .ml_layer import ml_findings
-
-            findings.extend(ml_findings(state))
-        for f in findings:
-            if f.confidence < min_confidence:
-                continue
-            key = (f.zone_id, tuple(sorted(f.lineage)))
-            if key in seen:
-                continue
-            seen.add(key)
-            if shadow:
-                f.shadow = True
-            sink(f)
-            emitted += 1
-        if after_event is not None:
-            after_event(e)
+    finally:
+        dedupe.save()
     return emitted
 
 

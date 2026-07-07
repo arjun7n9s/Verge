@@ -31,11 +31,21 @@ class CepState:
 
     window_min: float = 5.0
     max_events: int = 500
+    max_lateness_min: float = 2.0
     by_zone: dict[str, deque[_Event]] = field(default_factory=lambda: defaultdict(deque))
+    watermark: datetime | None = None
+    late_dropped: int = 0
 
-    def ingest(self, event: dict) -> None:
+    def ingest(self, event: dict) -> bool:
+        """Ingest by event time; drop events past ``max_lateness_min`` behind watermark."""
         zone = event.get("zoneId", "unknown")
         ts = _dt(event["ts"])
+        if self.watermark is not None:
+            lateness = (self.watermark - ts).total_seconds() / 60.0
+            if lateness > self.max_lateness_min:
+                self.late_dropped += 1
+                return False
+        self.watermark = ts if self.watermark is None else max(self.watermark, ts)
         buf = self.by_zone[zone]
         buf.append(_Event(ts=ts, event=event))
         cutoff = ts - timedelta(minutes=self.window_min)
@@ -43,6 +53,7 @@ class CepState:
             buf.popleft()
         while len(buf) > self.max_events:
             buf.popleft()
+        return True
 
     def events(self, zone_id: str) -> list[dict]:
         return [e.event for e in self.by_zone.get(zone_id, [])]
@@ -82,7 +93,8 @@ def evaluate_cep(
     now: datetime | None = None,
 ) -> list[RiskFinding]:
     """Run CEP patterns after ingesting ``event``; returns new pattern findings."""
-    state.ingest(event)
+    if not state.ingest(event):
+        return []
     zone = event.get("zoneId", "unknown")
     now = now or _dt(event["ts"])
     events = state.events(zone)
