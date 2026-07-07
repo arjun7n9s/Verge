@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verge-config
+  namespace: verge
+data:
+  VERGE_SITE_ID: pilot-plant-01
+  VERGE_STORE: sql
+  VERGE_DB_URL: postgresql+psycopg://verge:changeme@postgres:5432/verge
+  REDPANDA_BROKERS: redpanda:9092
+  VERGE_EVENTS_TOPIC: verge.events
+  VERGE_AUTH_ENABLED: "false"
+  VERGE_COGNEE_ENABLED: "false"

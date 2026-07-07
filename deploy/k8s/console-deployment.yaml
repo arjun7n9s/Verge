@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verge-console
+  namespace: verge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verge-console
+  template:
+    metadata:
+      labels:
+        app: verge-console
+    spec:
+      containers:
+        - name: console
+          image: verge-console:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80

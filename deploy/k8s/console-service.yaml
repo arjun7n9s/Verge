@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: verge-console
+  namespace: verge
+spec:
+  selector:
+    app: verge-console
+  ports:
+    - port: 80
+      targetPort: 80

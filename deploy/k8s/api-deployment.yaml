@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verge-api
+  namespace: verge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verge-api
+  template:
+    metadata:
+      labels:
+        app: verge-api
+    spec:
+      containers:
+        - name: api
+          image: verge-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: verge-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 20

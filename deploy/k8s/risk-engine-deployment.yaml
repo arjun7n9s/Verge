@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verge-risk-engine
+  namespace: verge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verge-risk-engine
+  template:
+    metadata:
+      labels:
+        app: verge-risk-engine
+    spec:
+      containers:
+        - name: risk-engine
+          image: verge-risk-engine:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: verge-config
+          command:
+            - python
+            - -m
+            - verge_risk
+            - --redpanda
+            - redpanda:9092
+            - --topic
+            - verge.events
+            - --post
+            - http://verge-api:8000
