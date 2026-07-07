@@ -1,0 +1,33 @@
+{
+  "CAM-B04": [
+    {
+      "frameId": "f-0001",
+      "label": "person",
+      "zoneId": "B-04",
+      "confidence": 0.94,
+      "ts": "2025-01-14T06:12:00",
+      "detail": "worker near charging-car",
+      "bbox": [0.41, 0.55, 0.08, 0.22]
+    },
+    {
+      "frameId": "f-0001",
+      "label": "ppe-missing",
+      "zoneId": "B-04",
+      "confidence": 0.88,
+      "ts": "2025-01-14T06:12:00",
+      "detail": "no hard-hat",
+      "bbox": [0.42, 0.50, 0.05, 0.06]
+    }
+  ],
+  "CAM-B05": [
+    {
+      "frameId": "f-0007",
+      "label": "zone-intrusion",
+      "zoneId": "B-05",
+      "confidence": 0.81,
+      "ts": "2025-01-14T06:15:00",
+      "detail": "restricted zone during hot-work permit",
+      "bbox": [0.60, 0.40, 0.10, 0.30]
+    }
+  ]
+}

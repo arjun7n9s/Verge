@@ -1,0 +1,24 @@
+[project]
+name = "verge-vision"
+version = "0.3.0"
+description = "PPE/person/zone-intrusion CV detector plane; degraded-by-default (spec §5)."
+requires-python = ">=3.11"
+dependencies = ["verge-schema"]
+
+[project.optional-dependencies]
+# The production on-prem backend (plant GPU box). Absent on the dev/CI host,
+# where the plane degrades to the stub instead of raising.
+gpu = ["ultralytics>=8.2"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["verge_vision"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"verge_vision/samples/vizag-ppe.json" = "verge_vision/samples/vizag-ppe.json"
+
+[tool.uv.sources]
+verge-schema = { workspace = true }
