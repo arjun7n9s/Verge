@@ -7,7 +7,14 @@ data:
   VERGE_SITE_ID: pilot-plant-01
   VERGE_STORE: sql
   VERGE_DB_URL: postgresql+psycopg://verge:changeme@postgres:5432/verge
+  VERGE_DB_MIGRATE: "true"
   REDPANDA_BROKERS: redpanda:9092
   VERGE_EVENTS_TOPIC: verge.events
-  VERGE_AUTH_ENABLED: "false"
+  VERGE_EVENTS_DLQ: verge.events.dlq
+  VERGE_AUTH_ENABLED: "true"
+  KEYCLOAK_URL: http://keycloak:8080
+  KEYCLOAK_REALM: verge
+  KEYCLOAK_CLIENT_ID: verge-console
+  KEYCLOAK_AUDIENCE: verge-console
+  VERGE_CORS_ORIGINS: https://console.verge.local
   VERGE_COGNEE_ENABLED: "false"

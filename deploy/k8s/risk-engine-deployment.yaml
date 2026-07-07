@@ -13,13 +13,28 @@ spec:
       labels:
         app: verge-risk-engine
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
         - name: risk-engine
-          image: verge-risk-engine:latest
+          image: verge-risk-engine:0.3.0
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: verge-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - python
             - -m
