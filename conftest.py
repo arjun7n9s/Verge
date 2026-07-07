@@ -11,7 +11,9 @@ ROOT = Path(__file__).parent
 for rel in (
     "packages/schema",
     "packages/audit",
+    "packages/contracts",
     "packages/llm",
+    "packages/mlops",
     "services/forecaster",
     "services/risk-engine",
     "services/api",
@@ -19,7 +21,11 @@ for rel in (
     "services/orchestrator",
     "services/permit",
     "services/twin",
+    "services/compliance",
+    "services/vision",
+    "services/connectors",
     "sims",
+    "cli",
     ".",  # eval is imported as a package from repo root
 ):
     p = str((ROOT / rel).resolve())

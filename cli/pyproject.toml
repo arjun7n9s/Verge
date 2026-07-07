@@ -3,7 +3,10 @@ name = "verge-cli"
 version = "0.3.0"
 description = "The verge CLI — replay, rules, sim, score."
 requires-python = ">=3.11"
-dependencies = ["verge-schema", "verge-risk-engine"]
+dependencies = [
+    "verge-schema", "verge-risk-engine", "verge-twin", "verge-compliance", "verge-connectors",
+    "verge-mlops", "verge-contracts",
+]
 
 [project.scripts]
 verge = "verge_cli.cli:main"
@@ -18,3 +21,8 @@ packages = ["verge_cli"]
 [tool.uv.sources]
 verge-schema = { workspace = true }
 verge-risk-engine = { workspace = true }
+verge-twin = { workspace = true }
+verge-compliance = { workspace = true }
+verge-connectors = { workspace = true }
+verge-mlops = { workspace = true }
+verge-contracts = { workspace = true }
