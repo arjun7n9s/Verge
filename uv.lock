@@ -29,6 +29,7 @@ members = [
     "verge-risk-engine",
     "verge-schema",
     "verge-sims",
+    "verge-supplychain",
     "verge-twin",
     "verge-vision",
     "verge-voice",
@@ -2484,6 +2485,7 @@ dependencies = [
     { name = "verge-risk-engine" },
     { name = "verge-schema" },
     { name = "verge-sims" },
+    { name = "verge-supplychain" },
     { name = "verge-twin" },
     { name = "verge-vision" },
     { name = "verge-voice" },
@@ -2497,8 +2499,10 @@ postgres = [
 [package.dev-dependencies]
 dev = [
     { name = "httpx" },
+    { name = "joblib" },
     { name = "pytest" },
     { name = "ruff" },
+    { name = "scikit-learn" },
 ]
 
 [package.metadata]
@@ -2520,6 +2524,7 @@ requires-dist = [
     { name = "verge-risk-engine", editable = "services/risk-engine" },
     { name = "verge-schema", editable = "packages/schema" },
     { name = "verge-sims", editable = "sims" },
+    { name = "verge-supplychain", editable = "packages/supplychain" },
     { name = "verge-twin", editable = "services/twin" },
     { name = "verge-vision", editable = "services/vision" },
     { name = "verge-voice", editable = "services/voice" },
@@ -2529,8 +2534,10 @@ provides-extras = ["postgres"]
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.27" },
+    { name = "joblib", specifier = ">=1.4" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.6" },
+    { name = "scikit-learn", specifier = ">=1.5" },
 ]
 
 [[package]]
@@ -2554,6 +2561,7 @@ dependencies = [
     { name = "verge-permit" },
     { name = "verge-risk-engine" },
     { name = "verge-schema" },
+    { name = "verge-supplychain" },
     { name = "verge-twin" },
     { name = "verge-vision" },
     { name = "verge-voice" },
@@ -2587,6 +2595,7 @@ requires-dist = [
     { name = "verge-permit", editable = "services/permit" },
     { name = "verge-risk-engine", editable = "services/risk-engine" },
     { name = "verge-schema", editable = "packages/schema" },
+    { name = "verge-supplychain", editable = "packages/supplychain" },
     { name = "verge-twin", editable = "services/twin" },
     { name = "verge-vision", editable = "services/vision" },
     { name = "verge-voice", editable = "services/voice" },
@@ -2616,6 +2625,7 @@ dependencies = [
     { name = "verge-mlops" },
     { name = "verge-risk-engine" },
     { name = "verge-schema" },
+    { name = "verge-supplychain" },
     { name = "verge-twin" },
 ]
 
@@ -2634,6 +2644,7 @@ requires-dist = [
     { name = "verge-mlops", editable = "packages/mlops" },
     { name = "verge-risk-engine", editable = "services/risk-engine" },
     { name = "verge-schema", editable = "packages/schema" },
+    { name = "verge-supplychain", editable = "packages/supplychain" },
     { name = "verge-twin", editable = "services/twin" },
 ]
 provides-extras = ["kafka"]
@@ -2860,6 +2871,11 @@ requires-dist = [
     { name = "verge-schema", editable = "packages/schema" },
 ]
 provides-extras = ["mqtt"]
+
+[[package]]
+name = "verge-supplychain"
+version = "0.3.0"
+source = { editable = "packages/supplychain" }
 
 [[package]]
 name = "verge-twin"
