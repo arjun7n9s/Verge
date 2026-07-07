@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from verge_contracts.envelope import ContractViolation, validate_and_enrich
 
 from .. import metrics_counters
-from ..stream_notify import notify_reading
+from ..stream_notify import drain_outbox
 from ..telemetry import telemetry_for_finding
 from ..timescale_writer import maybe_write_timescale, timescale_status
 from ..trace import current_trace_id
@@ -37,6 +37,10 @@ def ingest_reading(body: ReadingIngestBody, request: Request) -> dict:
         metrics_counters.contract_rejections += 1
         raise HTTPException(422, {"errors": exc.result.errors}) from exc
 
+    skip_redpanda = request.headers.get("X-Verge-Skip-Republish", "").lower() in {
+        "1", "true", "yes",
+    }
+
     buf = request.app.state.readings
     buf.ingest(payload)
     ts_result = maybe_write_timescale(payload)
@@ -44,12 +48,18 @@ def ingest_reading(body: ReadingIngestBody, request: Request) -> dict:
         metrics_counters.timescale_write_failures += 1
     elif ts_result.get("written"):
         metrics_counters.timescale_writes += 1
-    notify_reading(request.app, payload)
+
+    store = request.app.state.store
+    if hasattr(store, "enqueue_reading"):
+        store.enqueue_reading(payload, skip_redpanda=skip_redpanda)
+    drain_outbox(request.app)
+
     return {
         "ok": True,
         "sensorId": payload["sensorId"],
         "eventId": payload.get("eventId"),
         "timescale": ts_result,
+        "outboxPending": getattr(store, "outbox_pending", lambda: 0)(),
     }
 
 

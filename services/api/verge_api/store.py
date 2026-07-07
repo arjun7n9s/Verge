@@ -16,7 +16,7 @@ from verge_schema.enums import FindingState as S
 from verge_schema.findings import FindingFeedback, RiskFinding
 from verge_schema.lifecycle import transition
 
-from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED
+from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
 
 
 def _now() -> datetime:
@@ -137,6 +137,12 @@ class InMemoryStore:
             publish(row["kind"], row["payload"])
         self._outbox = self._outbox[len(batch):]
         return len(batch)
+
+    def enqueue_reading(self, event: dict, *, skip_redpanda: bool = False) -> None:
+        self._outbox.append({
+            "kind": READING_INGESTED,
+            "payload": {"event": event, "skipRedpanda": skip_redpanda},
+        })
 
 
 # Back-compat alias: `Store` is the in-memory implementation.

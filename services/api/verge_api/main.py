@@ -21,6 +21,7 @@ from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from verge_llm import provider_from_env
 from verge_mlops import DEMO_REGISTRY, ModelRegistry
+from verge_mlops.canary import parse_canary_zones
 from verge_orchestrator import respond
 from verge_risk.health import ribbon as health_ribbon  # noqa: F401 (kept in sync)
 from verge_schema.enums import FeedbackVerdict
@@ -152,6 +153,9 @@ llm = provider_from_env()
 app.state.llm = llm
 app.state.vision = vision_provider_from_env()
 app.state.model_registry = _load_model_registry()
+app.state.canary_zones = parse_canary_zones(
+    os.environ.get("VERGE_ML_CANARY_ZONES", "compound-risk:B-04,B-05"),
+)
 app.state.started_at = datetime.now(UTC)
 if not store.list_findings(shadow=None):
     seed(store)

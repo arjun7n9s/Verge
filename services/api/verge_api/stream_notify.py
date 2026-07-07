@@ -4,19 +4,28 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
-from .outbox import FINDINGS_UPDATED, READING_INGESTED
+from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
+from .redpanda_publish import maybe_publish_event
+
+
+def _reading_event(payload: dict) -> dict:
+    return payload.get("event") or payload
 
 
 def _publish_outbox_event(app: FastAPI, kind: str, payload: dict) -> None:
     bus = getattr(app.state, "stream_bus", None)
-    if bus is None:
+    if kind in (FINDINGS_UPDATED, FINDING_TRANSITION):
+        if bus is not None:
+            store = app.state.store
+            findings = [f.model_dump(by_alias=True, mode="json") for f in store.list_findings()]
+            bus.publish_findings(findings)
         return
-    if kind in (FINDINGS_UPDATED, "finding-transition"):
-        store = app.state.store
-        findings = [f.model_dump(by_alias=True, mode="json") for f in store.list_findings()]
-        bus.publish_findings(findings)
-    elif kind == READING_INGESTED:
-        bus.publish_event(payload)
+    if kind == READING_INGESTED:
+        event = _reading_event(payload)
+        if bus is not None:
+            bus.publish_event(event)
+        if not payload.get("skipRedpanda"):
+            maybe_publish_event(event)
 
 
 def notify_findings(app: FastAPI) -> None:
@@ -30,10 +39,11 @@ def notify_findings(app: FastAPI) -> None:
 
 
 def notify_reading(app: FastAPI, event: dict) -> None:
+    """Legacy direct notify — prefer ``enqueue_reading`` + ``drain_outbox``."""
     bus = getattr(app.state, "stream_bus", None)
-    if bus is None:
-        return
-    bus.publish_event(event)
+    if bus is not None:
+        bus.publish_event(event)
+    maybe_publish_event(event)
 
 
 def drain_outbox(app: FastAPI, *, limit: int = 100) -> int:

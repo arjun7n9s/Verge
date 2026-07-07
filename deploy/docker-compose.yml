@@ -121,6 +121,8 @@ services:
       VERGE_CORS_ORIGINS: ${VERGE_CORS_ORIGINS:-*}
       VERGE_DB_MIGRATE: ${VERGE_DB_MIGRATE:-false}
       VERGE_EVENTS_DLQ: ${VERGE_EVENTS_DLQ:-verge.events.dlq}
+      VERGE_ML_CANARY_ZONES: ${VERGE_ML_CANARY_ZONES:-compound-risk:B-04,B-05}
+      VERGE_OUTBOX_REDPANDA: ${VERGE_OUTBOX_REDPANDA:-true}
       VERGE_COGNEE_ENABLED: ${VERGE_COGNEE_ENABLED:-false}
       AIMLAPI_API_KEY: ${AIMLAPI_API_KEY:-}
       SPEECHMATICS_API_KEY: ${SPEECHMATICS_API_KEY:-}
@@ -163,6 +165,8 @@ services:
       VERGE_EVENTS_TOPIC: verge.events
       VERGE_CEP: ${VERGE_CEP:-true}
       VERGE_ML_LAYER: ${VERGE_ML_LAYER:-true}
+      VERGE_ML_CANARY_ZONES: ${VERGE_ML_CANARY_ZONES:-compound-risk:B-04,B-05}
+      VERGE_OUTBOX_REDPANDA: ${VERGE_OUTBOX_REDPANDA:-true}
     depends_on:
       redpanda:
         condition: service_healthy

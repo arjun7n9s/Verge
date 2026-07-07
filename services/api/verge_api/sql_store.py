@@ -22,7 +22,7 @@ from verge_schema.findings import FindingFeedback, RiskFinding
 from verge_schema.lifecycle import transition
 
 from . import db
-from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED
+from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
 
 
 def _now() -> datetime:
@@ -269,3 +269,12 @@ class SqlStore:
                     .values(published_at=now)
                 )
         return len(rows)
+
+    def enqueue_reading(self, event: dict, *, skip_redpanda: bool = False) -> None:
+        """Queue a reading-ingested notification (Timescale/buffer already written)."""
+        with self.engine.begin() as conn:
+            self._enqueue_outbox(
+                conn,
+                READING_INGESTED,
+                {"event": event, "skipRedpanda": skip_redpanda},
+            )
