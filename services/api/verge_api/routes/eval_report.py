@@ -14,7 +14,7 @@ _EVAL_OUT = _REPO_ROOT / "eval" / "out"
 
 
 @router.get("/eval/report")
-def eval_report() -> dict:
+def eval_report() -> list:
     """Latest replay harness output (``eval/out/report.json``)."""
     path = _EVAL_OUT / "report.json"
     if not path.is_file():
@@ -22,4 +22,7 @@ def eval_report() -> dict:
             404,
             "eval report not found — run `make eval` or `uv run verge replay --all`",
         )
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, list):
+        raise HTTPException(500, "eval report.json must be a JSON array")
+    return data
