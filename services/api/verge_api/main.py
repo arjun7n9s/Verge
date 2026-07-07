@@ -35,8 +35,10 @@ from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
 from .ops import ops_snapshot, render_prometheus
 from .routes.alerts import router as alerts_router
+from .routes.commission import router as commission_router
 from .routes.compliance import router as compliance_router
 from .routes.degradation import router as degradation_router
+from .routes.eval_report import router as eval_report_router
 from .routes.evidence import router as evidence_router
 from .routes.fleet import router as fleet_router
 from .routes.memory import router as memory_router
@@ -44,6 +46,7 @@ from .routes.models import router as models_router
 from .routes.ops import router as ops_router
 from .routes.permits import router as permits_router
 from .routes.plant import router as plant_router
+from .routes.plant_graph import router as plant_graph_router
 from .routes.readings import router as readings_router
 from .routes.reports import router as reports_router
 from .routes.vision import router as vision_router
@@ -67,9 +70,12 @@ app.add_middleware(
 app.add_middleware(AuthMiddleware)
 app.include_router(fleet_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
+app.include_router(commission_router, prefix="/api")
 app.include_router(compliance_router, prefix="/api")
+app.include_router(eval_report_router, prefix="/api")
 app.include_router(evidence_router, prefix="/api")
 app.include_router(plant_router, prefix="/api")
+app.include_router(plant_graph_router, prefix="/api")
 app.include_router(readings_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
