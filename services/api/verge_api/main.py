@@ -36,6 +36,7 @@ from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
 from .ops import ops_snapshot, render_prometheus
 from .routes.alerts import router as alerts_router
 from .routes.compliance import router as compliance_router
+from .routes.degradation import router as degradation_router
 from .routes.evidence import router as evidence_router
 from .routes.fleet import router as fleet_router
 from .routes.memory import router as memory_router
@@ -75,6 +76,7 @@ app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
 app.include_router(models_router, prefix="/api")
 app.include_router(ops_router, prefix="/api")
+app.include_router(degradation_router, prefix="/api")
 app.include_router(permits_router, prefix="/api")
 app.include_router(reports_router, prefix="/api")
 
