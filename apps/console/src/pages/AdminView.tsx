@@ -4,6 +4,7 @@ import { RulesEditor } from '@/components/organisms/RulesEditor';
 import { MemoryStatusPanel } from '@/components/organisms/MemoryStatusPanel';
 import { OpsStatusPanel } from '@/components/organisms/OpsStatusPanel';
 import { CompliancePanel } from '@/components/organisms/CompliancePanel';
+import { CommissioningPanel } from '@/components/organisms/CommissioningPanel';
 import { ModelRegistryPanel } from '@/components/organisms/ModelRegistryPanel';
 
 export default function AdminView() {
@@ -29,6 +30,8 @@ export default function AdminView() {
         <CompliancePanel />
         <ModelRegistryPanel />
       </div>
+
+      <CommissioningPanel />
 
       {/* Configuration Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

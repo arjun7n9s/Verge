@@ -38,6 +38,8 @@ export {
   getComplianceReport,
   getModelRegistry,
   dispatchAlert,
+  getCommissionSummary,
+  getIncidentReport,
 } from './platform';
 export type {
   DegradationBanner,
@@ -49,6 +51,8 @@ export type {
   ModelCard,
   ModelRegistry,
   AlertDispatchReceipt,
+  CommissionCheck,
+  CommissionSummary,
 } from './platform';
 export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';

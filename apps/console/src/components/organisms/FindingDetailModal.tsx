@@ -4,6 +4,7 @@ import { Modal, Button, Badge } from '@/components/atoms';
 import { transitionFinding } from '@/api';
 import { TemporalConvergenceChart } from './TemporalConvergenceChart';
 import { ExportEvidenceButton } from '@/components/molecules/ExportEvidenceButton';
+import { ExportIncidentReportButton } from '@/components/molecules/ExportIncidentReportButton';
 import { FindingAuditTab } from '@/components/molecules/FindingAuditTab';
 import {
   FileText,
@@ -111,6 +112,7 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
               </Button>
             )}
             <ExportEvidenceButton finding={finding} />
+            <ExportIncidentReportButton finding={finding} />
           </div>
         </div>
 

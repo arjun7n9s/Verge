@@ -66,6 +66,32 @@ export interface AlertDispatchReceipt {
   results: Array<{ channel: string; delivered: boolean; degraded: boolean; reason?: string }>;
 }
 
+export interface CommissionCheck {
+  step: string;
+  status: string;
+  detail: string;
+}
+
+export interface CommissionSummary {
+  plant: string;
+  ready: boolean;
+  checks: CommissionCheck[];
+  dryRun?: Array<Record<string, unknown>>;
+}
+
+export async function getCommissionSummary(signal?: AbortSignal): Promise<CommissionSummary> {
+  return request<CommissionSummary>('/api/commission/summary', { signal });
+}
+
+export async function getIncidentReport(
+  findingId: string,
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(`/api/findings/${findingId}/incident-report`, {
+    signal,
+  });
+}
+
 export async function getDegradationStatus(signal?: AbortSignal): Promise<DegradationStatus> {
   return request<DegradationStatus>('/api/degradation', { signal });
 }
