@@ -43,6 +43,7 @@ export {
   getEvalReport,
   getStreamStatus,
   syncPlantGraph,
+  getTimescaleStatus,
 } from './platform';
 export type {
   DegradationBanner,
@@ -57,6 +58,7 @@ export type {
   CommissionCheck,
   CommissionSummary,
   StreamStatus,
+  TimescaleStatus,
 } from './platform';
 export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';

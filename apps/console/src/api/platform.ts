@@ -146,3 +146,14 @@ export async function getStreamStatus(signal?: AbortSignal): Promise<StreamStatu
 export async function syncPlantGraph(signal?: AbortSignal): Promise<Record<string, unknown>> {
   return request<Record<string, unknown>>('/api/plant/graph-sync', { method: 'POST', signal });
 }
+
+export interface TimescaleStatus {
+  configured: boolean;
+  degraded: boolean;
+  readings?: number;
+  reason?: string;
+}
+
+export async function getTimescaleStatus(signal?: AbortSignal): Promise<TimescaleStatus> {
+  return request<TimescaleStatus>('/api/timescale/status', { signal });
+}
