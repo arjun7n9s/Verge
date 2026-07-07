@@ -63,6 +63,8 @@ from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
 from .stream_bus import StreamBus
 from .stream_notify import drain_outbox
+from .trace import current_trace_id, record_trace
+from .trace_index import TraceIndex
 from .trace_middleware import TraceMiddleware
 
 
@@ -161,6 +163,7 @@ app.include_router(stream_router, prefix="/api")
 # so a durable store keeps its history across restarts.
 store = make_store()
 app.state.store = store
+app.state.trace_index = TraceIndex()
 app.state.permits = make_permits_registry(store=store)
 llm = provider_from_env()
 app.state.llm = llm
@@ -228,6 +231,13 @@ def ingest_finding(finding: RiskFinding, request: Request) -> dict:
     appears on the console. Idempotent on finding_id."""
     store.add_finding(finding)
     drain_outbox(request.app)
+    record_trace(
+        request.app,
+        current_trace_id(),
+        "api.findings.ingest",
+        findingId=finding.finding_id,
+        zoneId=finding.zone_id,
+    )
     return finding.model_dump(by_alias=True, mode="json")
 
 

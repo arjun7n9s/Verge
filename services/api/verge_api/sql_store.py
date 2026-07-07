@@ -23,6 +23,7 @@ from verge_schema.lifecycle import transition
 
 from . import db
 from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
+from .trace import payload_with_trace
 
 
 def _now() -> datetime:
@@ -96,7 +97,7 @@ class SqlStore:
         entry = self._chain.append(
             actor="risk-engine",
             kind="finding-created",
-            payload={"findingId": f.finding_id, "title": f.title},
+            payload=payload_with_trace({"findingId": f.finding_id, "title": f.title}),
             timestamp=f.created_at,
         )
         try:
@@ -156,7 +157,7 @@ class SqlStore:
         entry = self._chain.append(
             actor=actor,
             kind="finding-event",
-            payload=ev.model_dump(by_alias=True, mode="json"),
+            payload=payload_with_trace(ev.model_dump(by_alias=True, mode="json")),
             timestamp=ev.timestamp,
         )
         try:

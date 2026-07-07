@@ -10,7 +10,7 @@ from .. import metrics_counters
 from ..stream_notify import drain_outbox
 from ..telemetry import telemetry_for_finding
 from ..timescale_writer import maybe_write_timescale, timescale_status
-from ..trace import current_trace_id
+from ..trace import current_trace_id, record_trace
 
 router = APIRouter(tags=["readings"])
 
@@ -53,6 +53,13 @@ def ingest_reading(body: ReadingIngestBody, request: Request) -> dict:
     if hasattr(store, "enqueue_reading"):
         store.enqueue_reading(payload, skip_redpanda=skip_redpanda)
     drain_outbox(request.app)
+    record_trace(
+        request.app,
+        payload.get("traceId"),
+        "api.readings.ingest",
+        sensorId=payload["sensorId"],
+        eventId=payload.get("eventId"),
+    )
 
     return {
         "ok": True,

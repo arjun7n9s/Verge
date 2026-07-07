@@ -85,6 +85,7 @@ def ops_snapshot(
     started_at: datetime,
     env: Mapping[str, str] | None = None,
     now: datetime | None = None,
+    trace_index=None,
 ) -> dict:
     """Assemble the plant-IT operability snapshot."""
     env = env if env is not None else os.environ
@@ -128,6 +129,7 @@ def ops_snapshot(
         "signedBundle": {"builtTs": bundle_ts, "ageSeconds": _age_seconds(bundle_ts, now)},
         "lastReplayRun": _last_replay_run(now),
         "timescale": timescale_status(env=env),
+        "tracing": trace_index.stats() if trace_index is not None else None,
     }
 
 

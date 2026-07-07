@@ -8,9 +8,20 @@ OTel collector in dev.
 from __future__ import annotations
 
 import contextvars
-import uuid
 
-TRACE_HEADER = "X-Verge-Trace-Id"
+from verge_contracts.trace import TRACE_HEADER, new_trace_id, trace_from_header
+
+__all__ = [
+    "TRACE_HEADER",
+    "current_trace_id",
+    "new_trace_id",
+    "payload_with_trace",
+    "record_trace",
+    "reset_trace_id",
+    "set_trace_id",
+    "trace_from_header",
+]
+
 _trace_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
 
 
@@ -26,11 +37,17 @@ def reset_trace_id(token: contextvars.Token) -> None:
     _trace_id.reset(token)
 
 
-def new_trace_id() -> str:
-    return uuid.uuid4().hex
+def payload_with_trace(payload: dict, *, trace_id: str | None = None) -> dict:
+    tid = trace_id or current_trace_id()
+    if not tid:
+        return payload
+    out = dict(payload)
+    out.setdefault("traceId", tid)
+    return out
 
 
-def trace_from_header(header_value: str | None) -> str:
-    if header_value and len(header_value) >= 8:
-        return header_value.strip()
-    return new_trace_id()
+def record_trace(app, trace_id: str | None, stage: str, **detail) -> None:
+    index = getattr(getattr(app, "state", None), "trace_index", None)
+    if index is None:
+        return
+    index.record(trace_id, stage, detail=detail)

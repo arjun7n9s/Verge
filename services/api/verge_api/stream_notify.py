@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
 from .redpanda_publish import maybe_publish_event
+from .trace import record_trace
 
 
 def _reading_event(payload: dict) -> dict:
@@ -26,6 +27,13 @@ def _publish_outbox_event(app: FastAPI, kind: str, payload: dict) -> None:
             bus.publish_event(event)
         if not payload.get("skipRedpanda"):
             maybe_publish_event(event)
+        record_trace(
+            app,
+            event.get("traceId"),
+            "bus.outbox.publish",
+            sensorId=event.get("sensorId"),
+            eventId=event.get("eventId"),
+        )
 
 
 def notify_findings(app: FastAPI) -> None:

@@ -25,6 +25,7 @@ def ops_status(request: Request) -> dict:
         vision=s.vision,
         version=request.app.version,
         started_at=s.started_at,
+        trace_index=getattr(s, "trace_index", None),
     )
 
 
@@ -55,3 +56,16 @@ def ops_audit_anchor_status(request: Request) -> dict:
 def ops_audit_anchor(request: Request) -> dict:
     """Sign and upload the current audit head to MinIO (admin)."""
     return anchor_audit_head(request.app.state.store)
+
+
+@router.get("/ops/trace/{trace_id}")
+def ops_trace_lookup(trace_id: str, request: Request) -> dict:
+    """Join indexed pipeline spans with audit rows sharing the same trace id."""
+    index = getattr(request.app.state, "trace_index", None)
+    spans = index.lookup(trace_id) if index is not None else []
+    audit = [
+        entry
+        for entry in request.app.state.store.audit_entries(limit=1000)
+        if entry.get("payload", {}).get("traceId") == trace_id
+    ]
+    return {"traceId": trace_id, "spans": spans, "auditHits": len(audit), "audit": audit[:20]}

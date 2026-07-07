@@ -17,6 +17,7 @@ from verge_schema.findings import FindingFeedback, RiskFinding
 from verge_schema.lifecycle import transition
 
 from .outbox import FINDING_TRANSITION, FINDINGS_UPDATED, READING_INGESTED
+from .trace import payload_with_trace
 
 
 def _now() -> datetime:
@@ -36,7 +37,8 @@ class InMemoryStore:
         self.findings[f.finding_id] = f
         self.audit_append(
             actor="risk-engine", kind="finding-created",
-            payload={"findingId": f.finding_id, "title": f.title}, timestamp=f.created_at,
+            payload=payload_with_trace({"findingId": f.finding_id, "title": f.title}),
+            timestamp=f.created_at,
         )
         self._outbox.append({"kind": FINDINGS_UPDATED, "payload": {"findingId": f.finding_id}})
         return f
@@ -74,7 +76,7 @@ class InMemoryStore:
         if to in (S.ASSIGNED, S.IN_PROGRESS) and actor:
             f.owner = actor
         self.audit_append(actor=actor, kind="finding-event",
-                          payload=ev.model_dump(by_alias=True, mode="json"),
+                          payload=payload_with_trace(ev.model_dump(by_alias=True, mode="json")),
                           timestamp=ev.timestamp)
         self._outbox.append({
             "kind": FINDING_TRANSITION,
