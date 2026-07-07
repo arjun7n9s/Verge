@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
   "verge-schema",
   "verge-contracts",
+  "verge-mlops",
   "verge-forecaster",
   "verge-twin",
   "verge-permit",
@@ -14,7 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 redpanda = ["confluent-kafka>=2.5"]
-ml = ["scikit-learn>=1.5", "numpy>=1.26"]
+ml = ["scikit-learn>=1.5", "numpy>=1.26", "joblib>=1.4"]
 
 [build-system]
 requires = ["hatchling"]
@@ -26,6 +27,7 @@ packages = ["verge_risk"]
 [tool.uv.sources]
 verge-schema = { workspace = true }
 verge-contracts = { workspace = true }
+verge-mlops = { workspace = true }
 verge-forecaster = { workspace = true }
 verge-twin = { workspace = true }
 verge-permit = { workspace = true }

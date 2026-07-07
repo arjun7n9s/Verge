@@ -2752,6 +2752,15 @@ name = "verge-mlops"
 version = "0.3.0"
 source = { editable = "packages/mlops" }
 
+[package.optional-dependencies]
+artifacts = [
+    { name = "joblib" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "joblib", marker = "extra == 'artifacts'", specifier = ">=1.4" }]
+provides-extras = ["artifacts"]
+
 [[package]]
 name = "verge-orchestrator"
 version = "0.3.0"
@@ -2788,6 +2797,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "verge-contracts" },
     { name = "verge-forecaster" },
+    { name = "verge-mlops" },
     { name = "verge-permit" },
     { name = "verge-schema" },
     { name = "verge-twin" },
@@ -2795,6 +2805,7 @@ dependencies = [
 
 [package.optional-dependencies]
 ml = [
+    { name = "joblib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "scikit-learn" },
@@ -2806,11 +2817,13 @@ redpanda = [
 [package.metadata]
 requires-dist = [
     { name = "confluent-kafka", marker = "extra == 'redpanda'", specifier = ">=2.5" },
+    { name = "joblib", marker = "extra == 'ml'", specifier = ">=1.4" },
     { name = "numpy", marker = "extra == 'ml'", specifier = ">=1.26" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "scikit-learn", marker = "extra == 'ml'", specifier = ">=1.5" },
     { name = "verge-contracts", editable = "packages/contracts" },
     { name = "verge-forecaster", editable = "services/forecaster" },
+    { name = "verge-mlops", editable = "packages/mlops" },
     { name = "verge-permit", editable = "services/permit" },
     { name = "verge-schema", editable = "packages/schema" },
     { name = "verge-twin", editable = "services/twin" },
