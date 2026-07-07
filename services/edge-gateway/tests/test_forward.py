@@ -14,7 +14,11 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(length).decode())
-        _Handler.received.append({"path": self.path, "body": body})
+        _Handler.received.append({
+            "path": self.path,
+            "body": body,
+            "headers": dict(self.headers),
+        })
         self.send_response(200)
         self.end_headers()
 
@@ -43,10 +47,12 @@ def test_forward_reading(api_server: str) -> None:
             "unit": "%LEL",
             "zoneId": "B-04",
             "value": 91.5,
+            "traceId": "edge-trace-12345678",
         },
     )
     assert _Handler.received[0]["path"] == "/api/readings/ingest"
     assert _Handler.received[0]["body"]["sensorId"] == "LEL-04"
+    assert _Handler.received[0]["headers"]["X-Verge-Trace-Id"] == "edge-trace-12345678"
 
 
 def test_forward_permit(api_server: str) -> None:

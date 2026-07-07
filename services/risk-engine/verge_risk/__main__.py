@@ -18,6 +18,8 @@ import json
 import os
 import sys
 
+from verge_contracts.trace import TRACE_HEADER
+
 from . import STARTER_RULES, load_rules
 from .runner import consume_redpanda, run_stream
 
@@ -64,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
 
     posted = {"n": 0}
     permits_posted = {"n": 0}
+    current_trace = {"id": None}
 
     def _post_json(url: str, payload: str, *, extra_headers: dict | None = None) -> None:
         import urllib.request
@@ -84,13 +87,17 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(line + "\n")
         sys.stdout.flush()
         if args.post:
+            headers = {}
+            if current_trace["id"]:
+                headers[TRACE_HEADER] = current_trace["id"]
             try:
-                _post_json(f"{args.post.rstrip('/')}/api/findings", line)
+                _post_json(f"{args.post.rstrip('/')}/api/findings", line, extra_headers=headers)
                 posted["n"] += 1
             except Exception as exc:  # noqa: BLE001
                 print(f"post failed: {exc}", file=sys.stderr)
 
     def on_event(e: dict) -> None:
+        current_trace["id"] = e.get("traceId")
         if not args.post:
             return
         base = args.post.rstrip("/")
@@ -111,11 +118,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"permit post failed: {exc}", file=sys.stderr)
         elif e.get("type") == "reading":
             body = json.dumps(e)
+            headers = {}
+            if current_trace["id"]:
+                headers[TRACE_HEADER] = current_trace["id"]
             try:
                 _post_json(
                     f"{base}/api/readings/ingest",
                     body,
-                    extra_headers={"X-Verge-Skip-Republish": "true"},
+                    extra_headers={**headers, "X-Verge-Skip-Republish": "true"},
                 )
             except Exception as exc:  # noqa: BLE001
                 print(f"reading post failed: {exc}", file=sys.stderr)

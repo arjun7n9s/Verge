@@ -187,6 +187,7 @@ def consume_redpanda(brokers: str, topic: str, rules: list[Rule],
     """Bridge a Redpanda topic into run_stream with explicit offset commits."""
 
     from confluent_kafka import Consumer, Producer
+    from verge_contracts.trace import TRACE_HEADER
 
     group = os.environ.get("VERGE_RISK_GROUP", "verge-risk-engine")
     offset_reset = os.environ.get("VERGE_KAFKA_OFFSET_RESET", "latest")
@@ -202,6 +203,16 @@ def consume_redpanda(brokers: str, topic: str, rules: list[Rule],
     producer = Producer({"bootstrap.servers": brokers})
     pending_msg = {"msg": None}
 
+    def _trace_from_message(msg) -> str | None:
+        for key, value in msg.headers() or []:
+            name = key.decode() if isinstance(key, bytes) else key
+            if name != TRACE_HEADER:
+                continue
+            if isinstance(value, bytes):
+                return value.decode()
+            return str(value)
+        return None
+
     def gen():
         while True:
             msg = consumer.poll(1.0)
@@ -209,7 +220,11 @@ def consume_redpanda(brokers: str, topic: str, rules: list[Rule],
                 continue
             pending_msg["msg"] = msg
             try:
-                yield json.loads(msg.value())
+                raw = json.loads(msg.value())
+                trace_id = raw.get("traceId") or _trace_from_message(msg)
+                if trace_id and "traceId" not in raw:
+                    raw = {**raw, "traceId": trace_id}
+                yield raw
             except json.JSONDecodeError:
                 producer.produce(dlq_topic, msg.value(), key=msg.key())
                 producer.poll(0)

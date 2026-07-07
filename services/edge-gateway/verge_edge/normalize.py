@@ -11,6 +11,9 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
+from verge_contracts.envelope import validate_and_enrich
+from verge_contracts.trace import resolve_trace_id
+
 
 class NormalizationError(ValueError):
     """Raised on a payload that cannot be made into a canonical event."""
@@ -29,11 +32,12 @@ def _parse_ts(raw: str | float | int | None) -> str:
 
 
 def _maybe_validate(event: dict, validate: bool) -> dict:
+    trace_id = resolve_trace_id(event=event)
     if not validate:
-        return event
-    from verge_contracts.envelope import validate_and_enrich
-
-    return validate_and_enrich(event)
+        out = dict(event)
+        out.setdefault("traceId", trace_id)
+        return out
+    return validate_and_enrich(event, trace_id=trace_id)
 
 
 def normalize_mqtt(topic: str, payload: bytes | str, *, validate: bool = True) -> dict:

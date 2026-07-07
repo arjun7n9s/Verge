@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 
+from verge_contracts.trace import TRACE_HEADER
+
 _producer = None
 _failures = 0
 _published = 0
@@ -30,7 +32,12 @@ def maybe_publish_event(event: dict, *, env: dict[str, str] | None = None) -> bo
             from confluent_kafka import Producer
 
             _producer = Producer({"bootstrap.servers": brokers})
-        _producer.produce(topic, json.dumps(event).encode())
+        payload = json.dumps(event).encode()
+        headers = None
+        trace_id = event.get("traceId")
+        if trace_id:
+            headers = [(TRACE_HEADER, str(trace_id).encode("utf-8"))]
+        _producer.produce(topic, payload, headers=headers)
         _producer.poll(0)
         _published += 1
         return True

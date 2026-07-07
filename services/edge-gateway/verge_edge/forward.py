@@ -6,6 +6,8 @@ import json
 import urllib.error
 import urllib.request
 
+from verge_contracts.trace import TRACE_HEADER
+
 
 def forward_to_api(base_url: str, event: dict, *, timeout: float = 5.0) -> None:
     """POST readings and permits to the API gateway; ignore unsupported kinds."""
@@ -34,10 +36,15 @@ def forward_to_api(base_url: str, event: dict, *, timeout: float = 5.0) -> None:
     else:
         return
 
+    headers = {"Content-Type": "application/json"}
+    trace_id = event.get("traceId")
+    if trace_id:
+        headers[TRACE_HEADER] = str(trace_id)
+
     req = urllib.request.Request(  # noqa: S310
         url,
         data=json.dumps(body).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
