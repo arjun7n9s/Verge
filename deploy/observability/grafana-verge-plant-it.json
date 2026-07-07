@@ -1,0 +1,112 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus"
+    }
+  ],
+  "title": "Verge — Plant IT (§14.6)",
+  "uid": "verge-plant-it",
+  "tags": ["verge", "plant-it", "safety"],
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "${DS_PROMETHEUS}" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Audit chain integrity",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "verge_audit_verified", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "BROKEN", "color": "red" } } },
+            { "type": "value", "options": { "1": { "text": "OK", "color": "green" } } }
+          ],
+          "thresholds": { "steps": [
+            { "color": "red", "value": null }, { "color": "green", "value": 1 }
+          ] }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Audit entries",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "verge_audit_entries", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Findings on record",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "verge_findings_total", "refId": "A" }]
+    },
+    {
+      "type": "stat",
+      "title": "Models registered",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "verge_models_total", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Ingest — buffered readings",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "verge_ingest_readings", "refId": "A", "legendFormat": "readings" },
+        { "expr": "verge_ingest_sensors", "refId": "B", "legendFormat": "sensors" }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Sensor health by quality",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "verge_sensor_health", "refId": "A", "legendFormat": "{{quality}}" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Degradation posture (0 = healthy)",
+      "gridPos": { "h": 4, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [
+        { "expr": "verge_llm_degraded", "refId": "A", "legendFormat": "LLM" },
+        { "expr": "verge_vision_degraded", "refId": "B", "legendFormat": "vision" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "steps": [
+            { "color": "green", "value": null }, { "color": "orange", "value": 1 }
+          ] }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Uptime (seconds)",
+      "gridPos": { "h": 4, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "targets": [{ "expr": "verge_uptime_seconds", "refId": "A" }]
+    }
+  ]
+}

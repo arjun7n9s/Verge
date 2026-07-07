@@ -3,7 +3,8 @@
 COMPOSE := docker compose -f deploy/docker-compose.yml --env-file deploy/.env
 COMPOSE_APP := $(COMPOSE) --profile app
 
-.PHONY: help install up up-app down logs seed dev api console eval test lint fmt demo-live ci
+.PHONY: help install up up-app down logs seed dev api console eval test lint fmt demo-live ci \
+        commission compliance models demo-h1
 
 install: ## Set up the workspace (uv sync + pnpm install)
 	uv sync
@@ -45,6 +46,22 @@ eval: ## Run the replay harness vs baselines B0/B1/B2
 
 demo-live: ## Live path: sim stream -> risk-engine -> API (needs api on :8000)
 	uv run verge sim --scenario vizag-like | uv run python -m verge_risk --post http://localhost:8000
+
+commission: ## §14.5 — full 6-step commissioning report on the demo plant
+	uv run verge commission
+
+compliance: ## §5 — OISD/Factory Act gap assessment + evidence pack
+	uv run verge compliance
+
+models: ## §14 P4 — model registry (shadow/canary/production)
+	uv run verge models
+
+demo-h1: ## Horizon-1 tour: commission -> compliance -> models -> ingest|validate
+	@echo "== §14.5 Commissioning ==" && uv run verge commission
+	@echo "\n== §5 Compliance ==" && uv run verge compliance
+	@echo "\n== §14 P4 Model registry ==" && uv run verge models
+	@echo "\n== §14 Integration hub -> data contracts ==" && \
+	  uv run verge ingest --demo historian | uv run verge validate
 
 test: ## Run the Python test suite
 	uv run pytest

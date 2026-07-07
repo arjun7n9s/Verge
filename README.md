@@ -35,13 +35,18 @@ evidence — all able to run **inside an air-gapped plant network**.
 | `packages/schema` | Canonical data model (Pydantic + generated TS types) |
 | `packages/audit` | Hash-chained, append-only audit library |
 | `packages/llm` | `LLMProvider` abstraction (aimlapi ↔ on-prem Ollama/vLLM) |
+| `packages/mlops` | Model registry (shadow/canary/production) + PSI drift detection (§14) |
+| `packages/contracts` | Versioned data contracts / schema registry for canonical events (§14) |
 | `services/edge-gateway` | OPC-UA + MQTT ingest → stream bus |
 | `services/risk-engine` | Compound Risk Engine + sensor-health plane (LLM-independent) |
 | `services/forecaster` | Rate-based lead-time **bands** |
 | `services/orchestrator` | Advisory response — alerts, evidence packs, report drafts (P8) |
 | `services/permit` | Digital permit-to-work + SIMOPS spatial-temporal conflict detection |
-| `services/twin` | Plant digital twin — zones, adjacency, per-sensor thresholds |
-| `services/api` | FastAPI gateway, SSE/WebSocket fan-out, durable store |
+| `services/twin` | Plant digital twin — zones, adjacency, per-sensor thresholds, **commissioning** (§14.5) |
+| `services/compliance` | OISD/Factory Act/DGMS gap detection + hash-chained evidence packs (§5) |
+| `services/vision` | PPE/person/zone CV detector plane — degraded-by-default, feeds `frame` lineage (§5) |
+| `services/connectors` | Integration hub — historian (PI/PHD) / CMMS (SAP/Maximo) / VMS connectors → canonical events (§14) |
+| `services/api` | FastAPI gateway, SSE/WebSocket fan-out, durable store, `/metrics` for plant IT (§14.6) |
 | `apps/console` | Operator console (React + Vite + MapLibre/deck.gl) |
 | `eval` | Replay-provable eval harness + incident datasets |
 | `sims` | SCADA/MQTT simulators emitting realistic event streams |
@@ -57,6 +62,7 @@ make up        # bring up infra (docker compose)
 make seed      # (re)generate the Vizag replay dataset
 make dev       # run api + console
 make eval      # run the replay harness vs. baselines B0/B1/B2
+make demo-h1   # Horizon-1 tour: commission → compliance → models → ingest|validate
 make test      # uv run pytest (whole workspace)
 ```
 
@@ -71,6 +77,9 @@ uv run verge sim --scenario vizag-like | uv run python -m verge_risk
 # SIMOPS — hot-work + confined-space in adjacent zones (compound, no single alarm)
 uv run verge sim --scenario simops-demo | uv run python -m verge_risk
 
+# integration hub (§14) — historian + CMMS data → the same engine
+uv run verge ingest --demo cmms; uv run verge ingest --demo historian | uv run python -m verge_risk
+
 # shadow mode (§14.5): run alongside the existing alarm system, tag don't alert
 uv run verge sim --scenario vizag-like | uv run python -m verge_risk --shadow
 
@@ -80,6 +89,23 @@ uv run verge sim --scenario vizag-like | uv run python -m verge_risk --post http
 
 In production the engine consumes the same canonical events from Redpanda
 (`python -m verge_risk --redpanda localhost:19092 --topic verge.events`).
+
+**Commissioning a plant** (§14.5 — the six-step, day-1 onboarding + the sales
+artifact). Runs dependency-free, so it works on an air-gapped OT box:
+
+```bash
+verge commission                       # full 6-step dry-run on the Vizag demo plant
+verge plant import --file zones.geojson --name my-plant --out my-plant.yaml
+verge sensor map   --csv sensors.csv --layout zones.geojson
+verge rules adopt                      # adopt the OISD starter rule library
+verge compliance                       # OISD/Factory Act gap report + evidence pack
+```
+
+See [`docs/commissioning.md`](docs/commissioning.md) and
+[`docs/operations.md`](docs/operations.md).
+
+**Plant IT** scrapes `GET /metrics` (Prometheus) and `GET /api/ops/status` — a
+day-2 surface distinct from the operator console (§14.6).
 
 See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.
 

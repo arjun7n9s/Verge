@@ -1,0 +1,27 @@
+# Prometheus scrape config for the Verge plant-IT surface (spec §14.6).
+# The Verge API exposes /metrics in text exposition format — no exporter sidecar
+# needed. This is the plant IT team's surface, distinct from the operator console.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+
+scrape_configs:
+  - job_name: verge-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: verge-api
+          plant: PLT-VIZAG
+
+# Suggested alerting rules (load via rule_files in a full deployment):
+#   - alert: VergeAuditChainBroken
+#     expr: verge_audit_verified == 0
+#     for: 1m
+#     labels: { severity: critical }
+#     annotations: { summary: "Audit chain failed re-verification" }
+#   - alert: VergeIngestStalled
+#     expr: increase(verge_ingest_readings[10m]) == 0
+#     for: 10m
+#     labels: { severity: warning }
+#     annotations: { summary: "No new sensor readings ingested in 10m" }

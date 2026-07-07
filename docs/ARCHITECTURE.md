@@ -24,6 +24,16 @@ Five planes (spec §2). Data flows up; the **safety core is LLM-independent** (P
 | §4.7 Sensor-health plane | `services/risk-engine/verge_risk/health.py` |
 | §5 Pillar 3 — Plant digital twin | `services/twin/verge_twin/plant.py` |
 | §5 Pillar 4 — SIMOPS permit conflicts | `services/permit/verge_permit/conflicts.py` |
+| §5 — Vision detector plane (PPE/person/zone) | `services/vision/verge_vision/detect.py` |
+| §5 — Compliance gap detection + evidence packs | `services/compliance/verge_compliance/` |
+| §14.5 Commissioning workflow (6 steps) | `services/twin/verge_twin/commission.py` + `cli/verge_cli/commission.py` |
+| §14.5 Layout geometry (dependency-free) | `services/twin/verge_twin/geometry.py` |
+| §14.6 Day-2 operability (plant-IT surface) | `services/api/verge_api/ops.py` + `/metrics` |
+| §14 Phase 3 — Incident report generator | `services/compliance/verge_compliance/incident_report.py` |
+| §14 Phase 4 — Integration hub connectors | `services/connectors/verge_connectors/` |
+| §14 Phase 4 — Model registry + drift (MLOps) | `packages/mlops/verge_mlops/` |
+| §14 Phase 4 — Schema registry / data contracts | `packages/contracts/verge_contracts/` |
+| §4.4 Alert dispatch (operator-gated, P8) | `services/orchestrator/verge_orchestrator/dispatch.py` |
 | §6 Safety Rules DSL | `services/risk-engine/verge_risk/rules.py` + `rules/*.yaml` |
 | §14.5 Shadow mode | `RiskFinding.shadow` + `run_stream(shadow=)` + `/api/findings?shadow=` |
 | Durable store (P6) | `services/api/verge_api/{store_base,store,sql_store,db,factory}.py` |
