@@ -13,6 +13,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from verge_audit import AuditChain
 from verge_schema.enums import DataQuality, FeedbackVerdict
 from verge_schema.enums import FindingState as S
@@ -37,24 +39,43 @@ class SqlStore:
             rows = conn.execute(
                 select(db.audit_entry).order_by(db.audit_entry.c.seq)
             ).mappings().all()
-        return AuditChain.from_entries(
+        return AuditChain.from_persisted(
             {
                 "entryId": r["entry_id"], "timestamp": r["ts"], "actor": r["actor"],
                 "kind": r["kind"], "payload": r["payload"], "prevHash": r["prev_hash"],
+                "hash": r["hash"],
             }
             for r in rows
         )
 
     # ── findings ──────────────────────────────────────────────────────────
+    def _upsert_finding(self, conn, f: RiskFinding) -> None:
+        values = {
+            "finding_id": f.finding_id,
+            "zone_id": f.zone_id,
+            "state": str(f.state),
+            "shadow": bool(f.shadow),
+            "created_at": f.created_at,
+            "data": f.model_dump(by_alias=True, mode="json"),
+        }
+        if conn.dialect.name == "postgresql":
+            stmt = pg_insert(db.finding).values(**values)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[db.finding.c.finding_id],
+                set_=values,
+            )
+        else:
+            stmt = sqlite_insert(db.finding).values(**values)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[db.finding.c.finding_id],
+                set_=values,
+            )
+        conn.execute(stmt)
+
     def add_finding(self, f: RiskFinding) -> RiskFinding:
-        # Idempotent on finding_id, portable across dialects (delete-then-insert).
+        # Idempotent on finding_id via dialect upsert (audit §4).
         with self.engine.begin() as conn:
-            conn.execute(delete(db.finding).where(db.finding.c.finding_id == f.finding_id))
-            conn.execute(insert(db.finding).values(
-                finding_id=f.finding_id, zone_id=f.zone_id, state=str(f.state),
-                shadow=bool(f.shadow), created_at=f.created_at,
-                data=f.model_dump(by_alias=True, mode="json"),
-            ))
+            self._upsert_finding(conn, f)
         self.audit_append("risk-engine", "finding-created",
                           {"findingId": f.finding_id, "title": f.title}, f.created_at)
         return f

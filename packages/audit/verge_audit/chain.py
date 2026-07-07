@@ -134,17 +134,41 @@ class AuditChain:
     @classmethod
     def from_entries(cls, rows: Iterable[dict[str, Any]]) -> AuditChain:
         """Rebuild from persisted rows and verify (used by snapshot restore)."""
+        return cls.from_persisted(rows)
+
+    @classmethod
+    def from_persisted(cls, rows: Iterable[dict[str, Any]]) -> AuditChain:
+        """Rebuild using persisted hash columns — catches partial DB tampering."""
+        from datetime import datetime
+
         chain = cls()
-        for r in rows:
-            chain._entries.append(
-                AuditEntry(
-                    entry_id=r["entryId"],
-                    timestamp=r["timestamp"],
-                    actor=r["actor"],
-                    kind=r["kind"],
-                    payload=r["payload"],
-                    prev_hash=r["prevHash"],
-                )
+        for i, r in enumerate(rows):
+            ts = r["timestamp"]
+            if isinstance(ts, str):
+                ts = datetime.fromisoformat(ts)
+            body = {
+                "entryId": r["entryId"],
+                "timestamp": ts,
+                "actor": r["actor"],
+                "kind": r["kind"],
+                "payload": r["payload"],
+                "prevHash": r["prevHash"],
+            }
+            prev_hash = r["prevHash"]
+            stored_hash = r.get("hash")
+            recomputed = hash_entry(prev_hash, body)
+            if stored_hash is not None and stored_hash != recomputed:
+                raise IntegrityError(i, "persisted hash does not match recomputed body")
+            entry = AuditEntry(
+                entry_id=r["entryId"],
+                timestamp=ts,
+                actor=r["actor"],
+                kind=r["kind"],
+                payload=r["payload"],
+                prev_hash=prev_hash,
             )
+            if stored_hash is not None and entry.hash != stored_hash:
+                raise IntegrityError(i, "stored hash column mismatch")
+            chain._entries.append(entry)
         chain.verify()
         return chain
