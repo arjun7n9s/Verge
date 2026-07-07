@@ -15,6 +15,13 @@ from .contracts import (
     FieldSpec,
     validate_stream,
 )
+from .envelope import (
+    ENVELOPE_VERSION,
+    ContractViolation,
+    enrich_event,
+    validate_and_enrich,
+    validate_event,
+)
 
 __all__ = [
     "PERMIT_V1",
@@ -25,5 +32,10 @@ __all__ = [
     "EventContract",
     "FieldSpec",
     "validate_stream",
+    "ENVELOPE_VERSION",
+    "ContractViolation",
+    "enrich_event",
+    "validate_and_enrich",
+    "validate_event",
 ]
 __version__ = "0.3.0"
