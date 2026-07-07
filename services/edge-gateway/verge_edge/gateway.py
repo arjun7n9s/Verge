@@ -11,6 +11,7 @@ import argparse
 import json
 import sys
 
+from .autonomy import EdgeAutonomy
 from .buffer import StoreAndForward
 from .forward import forward_to_api
 from .normalize import NormalizationError, normalize_mqtt
@@ -33,12 +34,38 @@ def main(argv: list[str] | None = None) -> int:
         "--post-api",
         help="Also POST readings/permits to the Verge API, e.g. http://localhost:8000",
     )
+    ap.add_argument(
+        "--autonomy",
+        action="store_true",
+        help="Fail-operational: local safety scoring when central link drops",
+    )
     args = ap.parse_args(argv)
 
     import paho.mqtt.client as mqtt  # lazy
 
     producer = _make_producer(args.brokers)
     saf = StoreAndForward()
+
+    def _local_evaluate(events: list[dict]) -> list[dict]:
+        """Deterministic edge safety core — high LEL without central dependency."""
+        out: list[dict] = []
+        for e in events:
+            if e.get("type") != "reading":
+                continue
+            val = e.get("value")
+            if e.get("kind") == "gas-lel" and isinstance(val, (int, float)) and val >= 80:
+                out.append({
+                    "type": "edge-finding",
+                    "sensorId": e.get("sensorId"),
+                    "zoneId": e.get("zoneId"),
+                    "leadTimeBand": "IMMINENT",
+                    "value": val,
+                })
+        return out
+
+    autonomy: EdgeAutonomy | None = None
+    if args.autonomy:
+        autonomy = EdgeAutonomy(_local_evaluate)
 
     def to_bus(event: dict) -> None:
         producer.produce(CANONICAL_TOPIC, json.dumps(event).encode())
@@ -48,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
                 forward_to_api(args.post_api, event)
             except RuntimeError as exc:
                 print(f"api forward: {exc}", file=sys.stderr)
+                if autonomy:
+                    autonomy.go_offline()
 
     def on_message(_client, _userdata, msg) -> None:
         try:
@@ -55,7 +84,13 @@ def main(argv: list[str] | None = None) -> int:
         except NormalizationError as e:
             print(f"drop: {e}", file=sys.stderr)
             return
-        saf.submit(event, to_bus)
+        if autonomy:
+            autonomy.ingest(event, to_bus)
+            if not autonomy.online:
+                for finding in autonomy.evaluate_local():
+                    print(f"edge-autonomous: {finding}", file=sys.stderr)
+        else:
+            saf.submit(event, to_bus)
 
     client = mqtt.Client()
     client.on_message = on_message
@@ -64,7 +99,8 @@ def main(argv: list[str] | None = None) -> int:
     dest = f"{args.brokers}/{CANONICAL_TOPIC}"
     if args.post_api:
         dest = f"{dest} + {args.post_api.rstrip('/')}/api"
-    print(f"edge-gateway: mqtt://{args.mqtt}:{args.port} -> {dest}", file=sys.stderr)
+    mode = "autonomy" if autonomy else "store-and-forward"
+    print(f"edge-gateway ({mode}): mqtt://{args.mqtt}:{args.port} -> {dest}", file=sys.stderr)
     client.loop_forever()
     return 0
 
