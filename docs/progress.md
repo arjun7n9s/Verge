@@ -650,3 +650,124 @@ Verification:
 
 - `uv run pytest -q` -> 324 passed, 1 warning.
 - `uv run ruff check .` -> all checks passed.
+
+## 2026-07-10 - Phase 1 backend truth-telling pass (agent)
+
+Direction from Arjun: prioritize the core product over hackathon deliverables
+(deck/diagram/video, explicitly deferred). "No demo hardcoded shit" — real
+video/audio/sensor sources routed through the platform should produce real,
+accurate output. Use Speechmatics/Cognee/aimlapi to their fullest, not as
+checkbox integrations. Make the eval story explicit about false-negative
+rate. Full plan: `C:\Users\arjun\.claude\plans\sequential-drifting-lagoon.md`.
+
+- **Explicit FNR metric** (`eval/harness.py`): every incident result now
+  carries a `miss` bool per method; `aggregate_fnr()` rolls it up across all
+  4 replays into `eval/out/aggregate.json` + a new `GET /api/eval/aggregate`
+  route, and `eval/out/report.md` states it in plain language: **Verge 0%
+  FNR, baselines 75-100% FNR** across the 4 real replayed incidents.
+- **Real replay API** (`services/api/verge_api/routes/replays.py`, new):
+  `GET /api/replays` + `GET /api/replays/{id}` serve the actual
+  `eval/replays/*` fixtures — ground truth, events, and Verge's own computed
+  alert timestamp/band/lead — mapped into the console's timeline shape.
+  Kills the frontend's 2-of-4 hardcoded `ReplayView` scenarios once wired up
+  in Phase 2.
+- **Compliance drill-down data**: `ClauseResult.to_dict()` now includes the
+  full `requirement` text, so `GET /api/compliance/report` carries everything
+  a drill-down UI needs in one call.
+- **Real vision detector** (`services/vision/verge_vision/detect.py`):
+  `ultralytics` promoted from a "gpu"-only extra to a normal dependency (CPU
+  inference is real and sufficient for periodic-sample CCTV). New
+  `UltralyticsDetector` runs real YOLOv8n person detection on an uploaded
+  frame; `services/vision/verge_vision/cameras.py` is a small camera->zone
+  registry so `zone-intrusion` is derived from which camera saw the person
+  (no camera calibration data exists in this repo, so pixel-space geometry
+  isn't honest to claim — a restricted-zone camera assignment is). New
+  `POST /api/vision/detect-frame` (multipart) and CLI `verge vision watch
+  --source <video|webcam> --camera <id> --post <api>` (new
+  `cli/verge_cli/vision_watch.py`, opencv-python frame sampler + forwarder)
+  are the actual tool for routing real footage instead of annotation replay.
+  **Manually verified end-to-end**: a real video built from a real photo
+  (ultralytics' bundled `zidane.jpg`) run through `verge vision watch` against
+  a live API produced real detections — `person conf=0.84 zone=B-05` /
+  `zone-intrusion conf=0.84 zone=B-05` — genuine YOLOv8n CPU inference, not a
+  fixture.
+
+### IMPORTANT — PPE detection: current approach and the honest gap
+
+**The problem.** There is no offline, purpose-trained PPE (hard-hat / hi-vis
+vest) classifier available in this repo or on this machine. Stock YOLOv8n
+detects `person` reliably (COCO-pretrained) but has no PPE-compliance class;
+building one requires a fine-tuned model trained on a labeled hard-hat/PPE
+dataset, which does not exist here today. Leaving `ppe-missing` permanently
+stubbed would have been the safe, honest default (consistent with this
+codebase's P4 "never fabricate" rule) — but Arjun's explicit direction was:
+*"do what's best at this moment... in this gen ai era I don't think anything
+is impossible."*
+
+**What's shipped now.** `UltralyticsDetector` crops each real detected person
+and asks a vision-capable LLM (aimlapi, via the widened `verge_llm.Message`
+that now accepts OpenAI-style multimodal content parts) a narrowly-scoped
+question: *compliant / missing / uncertain*. A detection is emitted **only**
+on a clear "missing" answer; "uncertain" and any degraded/unreachable LLM are
+both treated as *no signal*, never a guess presented as fact (P4 intact).
+Every VLM-inferred detection is tagged `inferredBy: "vlm"` in the API/audit
+payload (`Detection.inferred_by`) so it is never confused with a calibrated
+reading — this is a real, working signal today, but it is lower-precision
+than a purpose classifier, requires cloud reachability, and should be treated
+accordingly (verify before acting on it).
+
+**Honest tradeoffs.**
+- Requires `VERGE_LLM_PROVIDER=aimlapi` + a vision-capable
+  `VERGE_LLM_VISION_MODEL` reachable at inference time — degrades to *no PPE
+  signal at all* on an air-gapped site with no cloud path (P2 sovereignty is
+  preserved by degrading, not by faking an on-prem answer).
+- VLM crop classification is a general-purpose model doing a narrow visual
+  task it wasn't fine-tuned for — expect lower precision/recall than a
+  calibrated detector, and treat it as advisory, not evidence-grade, until
+  measured against real footage.
+- One LLM call per detected person per frame — a real cost/latency line item
+  at scale that a purpose classifier wouldn't have.
+
+**Suggested next steps** (not yet built):
+1. Fine-tune a small YOLOv8 classifier/detector on a public hard-hat/PPE
+   dataset (e.g. Roboflow "Hard Hat Workers" or the Kaggle PPE dataset) for
+   an offline, low-latency, air-gap-safe purpose classifier — restores full
+   P2 sovereignty for PPE detection specifically, not just the rest of the
+   platform.
+2. Once that model exists, consider keeping the VLM path as a **permanent
+   second-opinion/ensemble signal** rather than retiring it — classifier +
+   VLM agreement is a stronger signal than either alone for a high-stakes PPE
+   call, and the VLM path still helps sites that haven't deployed the
+   fine-tuned model yet.
+3. If/when real PPE footage is available, measure the VLM path's actual
+   precision/recall before it backs any automated action (Phase 1 verifies
+   only that the pipeline runs correctly end-to-end, not detection accuracy
+   on real PPE violations — that number does not exist yet, and none should
+   be claimed until it's measured, per this repo's own eval-driven ethos).
+
+### Deepened Cognee + aimlapi + Speechmatics usage
+
+- `packages/memory/verge_memory/query.py`: `query_memory()` now synthesizes a
+  real grounded answer over retrieved citations via aimlapi when reachable
+  (same "answer only from the provided facts" pattern as
+  `orchestrator/report.py`), falling back to the prior raw-snippet
+  concatenation when the LLM is degraded. No API contract change.
+- `services/voice/verge_voice/transcribe.py`: `structure_handover()` gained
+  an optional LLM-assisted extraction pass layered over the existing
+  deterministic regex heuristic; the regex path remains the permanent
+  fallback (never solely trust LLM-parsed JSON).
+- Near-miss voice reports are now ingested into Cognee's searchable corpus
+  (`ingest_document`), so operator-reported near-misses become part of
+  future Incident Pattern Intelligence retrieval — strengthens the RAG
+  pillar the brief calls for, not just a checkbox integration.
+
+### Verification
+
+- `uv run pytest -q` — full suite green, no regressions (started ~324 tests
+  at the last audit; this pass adds ~45 new tests across eval, compliance,
+  vision, API routes, and the CLI).
+- `uv run ruff check .` — clean.
+- `uv run python -m eval.harness --all` — `eval/out/report.md` now shows the
+  aggregate FNR table.
+- Manual end-to-end: `verge vision watch` against a live API with a real
+  video produced real YOLOv8n detections (see above).
