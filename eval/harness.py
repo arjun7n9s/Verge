@@ -75,6 +75,13 @@ def _lead_min(breach: datetime, alert: datetime | None) -> float | None:
     return None if alert is None else round((breach - alert).total_seconds() / 60.0, 1)
 
 
+def _is_miss(lead_min: float | None) -> bool:
+    """A method misses an incident if it never alerted, or alerted too late to
+    matter (at/after the breach). This is the false-negative-rate primitive —
+    the brief's own words: 'the metric that actually saves lives'."""
+    return lead_min is None or lead_min <= 0
+
+
 def run_incident(incident: str) -> dict:
     gt, events = load_replay(incident)
     gt_legacy, sensors, readings = _load_legacy(incident)
@@ -103,6 +110,10 @@ def run_incident(incident: str) -> dict:
             fa = sum(1 for r in rows if r.get("verdict") == "false-alarm")
             fpr = round(fa / len(rows), 3)
 
+    b0_lead = _lead_min(breach, b0)
+    b1_lead = _lead_min(breach, b1)
+    b2_lead = _lead_min(breach, b2)
+
     return {
         "incident": incident,
         "breachTs": gt["breachTs"],
@@ -111,12 +122,41 @@ def run_incident(incident: str) -> dict:
             "band": verge_band,
             "leadMin": lead,
             "bandCalibrated": band_calibrated(verge_band, lead),
+            "miss": _is_miss(lead),
         },
-        "b0": {"alertTs": b0.isoformat() if b0 else None, "leadMin": _lead_min(breach, b0)},
-        "b1": {"alertTs": b1.isoformat() if b1 else None, "leadMin": _lead_min(breach, b1)},
-        "b2": {"alertTs": b2.isoformat() if b2 else None, "leadMin": _lead_min(breach, b2)},
+        "b0": {
+            "alertTs": b0.isoformat() if b0 else None,
+            "leadMin": b0_lead,
+            "miss": _is_miss(b0_lead),
+        },
+        "b1": {
+            "alertTs": b1.isoformat() if b1 else None,
+            "leadMin": b1_lead,
+            "miss": _is_miss(b1_lead),
+        },
+        "b2": {
+            "alertTs": b2.isoformat() if b2 else None,
+            "leadMin": b2_lead,
+            "miss": _is_miss(b2_lead),
+        },
         "fpr": fpr,
     }
+
+
+def aggregate_fnr(results: list[dict]) -> dict:
+    """False-negative rate per method across every replayed incident: the share
+    of real incidents each method failed to flag before (or at/after) breach."""
+    total = len(results)
+    methods = ("verge", "b0", "b1", "b2")
+    agg: dict[str, dict] = {}
+    for m in methods:
+        misses = sum(1 for r in results if r[m]["miss"])
+        agg[m] = {
+            "misses": misses,
+            "total": total,
+            "fnr": round(misses / total, 3) if total else None,
+        }
+    return agg
 
 
 def _fmt(v) -> str:
@@ -125,6 +165,14 @@ def _fmt(v) -> str:
 
 def _lead(v) -> str:
     return "silent" if v is None else f"{v} min"
+
+
+_METHOD_LABEL = {
+    "verge": "Verge",
+    "b0": "B0 fixed threshold",
+    "b1": "B1 rate-of-rise",
+    "b2": "B2 AND-gate (multi-sensor)",
+}
 
 
 def render_markdown(results: list[dict]) -> str:
@@ -153,7 +201,22 @@ def render_markdown(results: list[dict]) -> str:
         "Band OK = alert band matched minutes-to-breach. "
         "Higher lead is better; 'silent' = never alerted before breach._",
         "",
+        "## False-negative rate — the metric that actually saves lives",
+        "",
+        "> A **miss** is any incident a method never flagged before breach (silent, or",
+        "> alerted at/after the fact). FNR = misses / incidents replayed. This is the",
+        "> same lead-time data above, stated the way it matters operationally: how many",
+        "> of these real incidents would each method have let through.",
+        "",
+        "| Method | Misses | Incidents | FNR |",
+        "|--------|--------|-----------|-----|",
     ]
+    agg = aggregate_fnr(results)
+    for m in ("verge", "b0", "b1", "b2"):
+        a = agg[m]
+        pct = "—" if a["fnr"] is None else f"{a['fnr'] * 100:.0f}%"
+        lines.append(f"| {_METHOD_LABEL[m]} | {a['misses']} | {a['total']} | **{pct}** |")
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -172,8 +235,13 @@ def main() -> int:
 
     results = [run_incident(i) for i in incidents]
     OUT.mkdir(exist_ok=True)
+    # report.json stays a bare array (existing contract: GET /eval/report,
+    # EvalReportPanel.tsx) — each incident dict gained a "miss" flag per method,
+    # additive only. The FNR rollup lives in its own file + its own route.
     report_json = json.dumps(results, indent=2, default=str) + "\n"
     (OUT / "report.json").write_text(report_json, encoding="utf-8")
+    aggregate_json = json.dumps(aggregate_fnr(results), indent=2) + "\n"
+    (OUT / "aggregate.json").write_text(aggregate_json, encoding="utf-8")
     md = render_markdown(results)
     (OUT / "report.md").write_text(md + "\n", encoding="utf-8")
     print(md)

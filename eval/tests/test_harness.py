@@ -2,7 +2,7 @@
 
 import pytest
 
-from eval.harness import run_incident
+from eval.harness import aggregate_fnr, run_incident
 from eval.runtime import REPLAYS
 
 ALL_REPLAYS = sorted(
@@ -32,3 +32,20 @@ def test_verge_beats_every_baseline(incident: str) -> None:
 def test_fpr_is_measured_from_feedback() -> None:
     r = run_incident("vizag-2025-01")
     assert r["fpr"] == 0.2  # 1 false-alarm of 5 seed feedback rows
+
+
+def test_verge_never_misses_a_replayed_incident() -> None:
+    for incident in ALL_REPLAYS:
+        r = run_incident(incident)
+        assert r["verge"]["miss"] is False, f"{incident}: Verge should not miss"
+
+
+def test_aggregate_fnr_reflects_baseline_silence() -> None:
+    results = [run_incident(i) for i in ALL_REPLAYS]
+    agg = aggregate_fnr(results)
+    assert agg["verge"]["misses"] == 0
+    assert agg["verge"]["fnr"] == 0.0
+    assert agg["verge"]["total"] == len(ALL_REPLAYS)
+    # B1 (rate-of-rise) is silent on every one of these replays today.
+    assert agg["b1"]["misses"] == len(ALL_REPLAYS)
+    assert agg["b1"]["fnr"] == 1.0
