@@ -6,6 +6,11 @@ requires-python = ">=3.11"
 dependencies = [
     "verge-schema", "verge-risk-engine", "verge-twin", "verge-compliance", "verge-connectors",
     "verge-mlops", "verge-contracts", "verge-edge-gateway", "verge-supplychain",
+    # opencv-python (not the -headless variant): verge-vision already pulls
+    # opencv-python transitively via ultralytics in this shared workspace
+    # venv, and the two distributions both ship a `cv2` module -- installing
+    # both would conflict. This CLI never needs the GUI bits either way.
+    "httpx>=0.27", "opencv-python>=4.9",
 ]
 
 [project.optional-dependencies]

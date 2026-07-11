@@ -329,6 +329,22 @@ def _cmd_sim(args) -> int:
     return sim_main(argv)
 
 
+def _cmd_vision(args) -> int:
+    if args.vision_cmd == "watch":
+        from .vision_watch import watch
+
+        result = watch(
+            source=args.source,
+            camera_id=args.camera_id,
+            post=args.post,
+            interval_s=args.interval_s,
+            max_frames=args.max_frames,
+        )
+        print(f"sent {result.frames_sent} frame(s), {result.frames_failed} failed")
+        return 0
+    raise SystemExit(f"unknown vision subcommand: {args.vision_cmd}")
+
+
 def _cmd_publish(args) -> int:
     from verge_edge.replay_producer import publish_jsonl
 
@@ -458,6 +474,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_comm.add_argument("--out", help="write the markdown report here")
     p_comm.add_argument("--json", action="store_true")
     p_comm.set_defaults(func=_cmd_commission)
+
+    p_vision = sub.add_parser("vision", help="vision plane tools (spec §5)")
+    vision_sub = p_vision.add_subparsers(dest="vision_cmd", required=True)
+    p_watch = vision_sub.add_parser(
+        "watch", help="sample a video/webcam and POST real frames for detection"
+    )
+    p_watch.add_argument("--source", required=True,
+                          help="video file path, or a webcam device index like 0")
+    p_watch.add_argument("--camera", required=True, dest="camera_id",
+                          help="camera id registered in VERGE_VISION_CAMERAS")
+    p_watch.add_argument("--post", required=True, help="API base URL, e.g. http://localhost:8000")
+    p_watch.add_argument("--interval-s", type=float, default=2.0)
+    p_watch.add_argument("--max-frames", type=int, default=None)
+    p_watch.set_defaults(func=_cmd_vision)
 
     return ap
 
