@@ -15,6 +15,9 @@ def test_compliance_report_shape_and_pack():
     assert body["plant"]
     assert 0.0 < body["coverageRatio"] <= 1.0
     assert body["clauses"]
+    # Full regulatory text must ride along so the console can drill into a gap
+    # from one call, without a second round-trip to /compliance/gaps.
+    assert all(c["requirement"] for c in body["clauses"])
     pack = body["evidencePack"]
     assert len(pack["manifestHash"]) == 64
     # The pack binds to the live audit head (P6).

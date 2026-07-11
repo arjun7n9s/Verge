@@ -95,6 +95,7 @@ class ClauseResult:
             "oisdRef": self.clause.oisd_ref,
             "standard": self.clause.standard,
             "title": self.clause.title,
+            "requirement": self.clause.requirement,
             "capability": self.clause.capability,
             "isPlatform": self.clause.is_platform,
             "status": self.status,
