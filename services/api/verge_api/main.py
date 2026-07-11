@@ -55,6 +55,7 @@ from .routes.plant import router as plant_router
 from .routes.plant_graph import router as plant_graph_router
 from .routes.plume import router as plume_router
 from .routes.readings import router as readings_router
+from .routes.replays import router as replays_router
 from .routes.reports import router as reports_router
 from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
@@ -147,6 +148,7 @@ app.include_router(evidence_router, prefix="/api")
 app.include_router(plant_router, prefix="/api")
 app.include_router(plant_graph_router, prefix="/api")
 app.include_router(readings_router, prefix="/api")
+app.include_router(replays_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
