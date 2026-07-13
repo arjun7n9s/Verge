@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RiskFinding } from '@/types';
 import { Modal, Button } from '@/components/atoms';
-import { transitionFinding } from '@/api';
+import { transitionFinding, getFindingExposure } from '@/api';
+import type { FindingExposure } from '@/api/workers';
 import { TemporalConvergenceChart } from './TemporalConvergenceChart';
 import { LeadTimeGauge } from '@/components/molecules/LeadTimeGauge';
+import { InvestigationPanel } from '@/components/molecules/InvestigationPanel';
 import { ExportEvidenceButton } from '@/components/molecules/ExportEvidenceButton';
 import { ExportIncidentReportButton } from '@/components/molecules/ExportIncidentReportButton';
 import { FindingAuditTab } from '@/components/molecules/FindingAuditTab';
@@ -27,6 +29,23 @@ type TabType = 'overview' | 'chart' | 'lineage' | 'audit';
 
 export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: FindingDetailModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [exposure, setExposure] = useState<FindingExposure | null>(null);
+
+  const findingId = finding?.findingId ?? null;
+  useEffect(() => {
+    if (!isOpen || !findingId) return;
+    let cancelled = false;
+    getFindingExposure(findingId)
+      .then((e) => {
+        if (!cancelled) setExposure(e);
+      })
+      .catch(() => {
+        if (!cancelled) setExposure(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, findingId]);
 
   if (!finding) return null;
 
@@ -75,6 +94,26 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
               {finding.estimateQuality}
             </div>
           </div>
+
+          {exposure && (
+            <div className="flex flex-col gap-1 font-mono text-xs">
+              <span className="text-micro text-ink-dim uppercase">Personnel exposure</span>
+              <div
+                className={clsx(
+                  'border rounded px-2.5 py-1 bg-panel-2/50 flex flex-col gap-0.5',
+                  exposure.headcountAtRisk > 0 ? 'border-near/40 text-near' : 'border-line text-ink-dim'
+                )}
+              >
+                <span className="font-bold tabular-nums">
+                  {exposure.headcountAtRisk} AT RISK
+                </span>
+                <span className="text-micro text-ink-dim">
+                  {exposure.inZone.length} in zone · {exposure.inAdjacent.length} adjacent
+                  {exposure.staleFixes > 0 && ` · ${exposure.staleFixes} stale fix`}
+                </span>
+              </div>
+            </div>
+          )}
 
           {finding.owner && (
             <div className="flex flex-col gap-1 font-mono text-xs">
@@ -164,6 +203,8 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
                     </div>
                   </div>
                 )}
+
+                <InvestigationPanel findingId={finding.findingId} />
               </div>
             )}
 
@@ -176,24 +217,22 @@ export function FindingDetailModal({ finding, isOpen, onClose, onSuccess }: Find
             {activeTab === 'lineage' && (
               <div className="flex flex-col gap-3 font-mono text-xs">
                 {finding.lineage && finding.lineage.length > 0 ? (
-                  finding.lineage.map((item, idx) => (
-                    <div key={idx} className="p-3 border border-line bg-panel-2/30 rounded flex flex-col gap-1">
-                      <div className="flex justify-between items-center text-ink-dim">
-                        <span className="font-bold text-ink uppercase">{item}</span>
-                        <span className="text-micro">{new Date().toLocaleTimeString()}</span>
-                      </div>
-                      <span className="text-micro text-ink-dim">REF ID: ref-{Math.random().toString(36).substring(2, 8)}</span>
-                      {item.toLowerCase().includes('cctv') && (
-                        <div className="h-24 bg-bg border border-line rounded mt-2 flex items-center justify-center relative overflow-hidden">
-                          <div className="absolute inset-0 bg-accent/5" />
-                          <div className="border border-dashed border-accent text-accent text-[9px] px-1 py-0.5 rounded absolute top-4 left-6 select-none font-bold">
-                            bbox [x:12, y:42] Gas Leak Detected
-                          </div>
-                          <span className="text-micro text-ink-dim z-10 font-bold uppercase select-none">CCTV Feed Simulator</span>
+                  finding.lineage.map((item, idx) => {
+                    const signal = finding.contributingSignals?.find((s) => `${s.kind}:${s.refId}` === item);
+                    return (
+                      <div key={idx} className="p-3 border border-line bg-panel-2/30 rounded flex flex-col gap-1">
+                        <div className="flex justify-between items-center text-ink-dim">
+                          <span className="font-bold text-ink uppercase">{item}</span>
+                          {signal?.ts && (
+                            <span className="text-micro">{new Date(signal.ts).toLocaleTimeString()}</span>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))
+                        {signal?.summary && (
+                          <span className="text-micro text-ink-dim leading-normal">{signal.summary}</span>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="text-ink-dim italic">No evidence signals attached.</div>
                 )}
