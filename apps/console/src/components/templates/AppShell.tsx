@@ -4,6 +4,7 @@ import { useConnectionStore } from '@/stores/connection';
 import { SensorRibbon } from '@/components/organisms/SensorRibbon';
 import { DegradationBannerStrip } from '@/components/organisms/DegradationBannerStrip';
 import { Shield, Activity, BarChart2, Settings, History, ArrowRightLeft } from 'lucide-react';
+import { Logo } from '@/components/atoms';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 
@@ -17,12 +18,11 @@ export default function AppShell() {
       {/* Top Header Navigation */}
       <header className="h-12 border-b border-line bg-panel flex items-center justify-between px-4 shrink-0 z-30">
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-accent" />
-            <span className="font-semibold text-base tracking-tight text-ink uppercase font-mono">VERGE</span>
+          <Link to="/" className="flex items-center" aria-label="Verge home">
+            <Logo size={22} />
           </Link>
           <span className="h-4 w-[1px] bg-line" />
-          <span className="text-xs text-ink-dim font-mono hidden md:inline">
+          <span className="text-xs text-ink-dim font-mono tracking-[0.12em] hidden md:inline">
             LEAD-TIME INTELLIGENCE &middot; OPERATOR CONSOLE
           </span>
         </div>

@@ -4,13 +4,14 @@
   "description": "Safety-critical lead-time intelligence for industrial operations",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#0e1116",
-  "background_color": "#0e1116"
+  "theme_color": "#0B0E13",
+  "background_color": "#0B0E13"
 }

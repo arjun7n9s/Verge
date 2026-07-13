@@ -4,20 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#0e1116',
-        panel: { DEFAULT: '#161b22', '2': '#1c232d' },
-        line: '#2a323d',
-        ink: { DEFAULT: '#e6edf3', dim: '#8b949e' },
-        accent: '#e8a33d',
-        imminent: '#f06363',
-        near: '#e8a33d',
-        watch: '#4fa3c7',
-        unknown: '#6b7682',
-        ok: '#4ec98a',
+        bg: '#0B0E13',
+        panel: { DEFAULT: '#12161D', '2': '#171D26' },
+        line: '#262E39',
+        ink: { DEFAULT: '#E8EDF4', dim: '#8C96A3' },
+        accent: '#F0A83E',
+        imminent: '#FF5C5C',
+        near: '#F0A83E',
+        watch: '#4FA3C7',
+        unknown: '#6B7682',
+        ok: '#43C989',
       },
       fontFamily: {
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        mono: ['ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
+        sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
       },
       fontSize: {
         micro: ['10px', { lineHeight: '1.4' }],

@@ -9,18 +9,18 @@
 
 @layer base {
   :root {
-    --bg: #0e1116;
-    --panel: #161b22;
-    --panel-2: #1c232d;
-    --line: #2a323d;
-    --ink: #e6edf3;
-    --ink-dim: #8b949e;
-    --accent: #e8a33d;
-    --imminent: #f06363;
-    --near: #e8a33d;
-    --watch: #4fa3c7;
-    --unknown: #6b7682;
-    --ok: #4ec98a;
+    --bg: #0B0E13;
+    --panel: #12161D;
+    --panel-2: #171D26;
+    --line: #262E39;
+    --ink: #E8EDF4;
+    --ink-dim: #8C96A3;
+    --accent: #F0A83E;
+    --imminent: #FF5C5C;
+    --near: #F0A83E;
+    --watch: #4FA3C7;
+    --unknown: #6B7682;
+    --ok: #43C989;
 
     /* Spacing scale (4px base) */
     --space-1: 4px;
@@ -51,7 +51,7 @@
   }
 
   body {
-    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 400;
     line-height: 1.45;
     color: var(--ink);
@@ -66,7 +66,7 @@
 
   /* Mono for IDs, codes, sensor readings */
   code, .mono {
-    font-family: ui-monospace, 'SF Mono', 'Menlo', monospace;
+    font-family: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
     font-size: 0.92em;
   }
 
@@ -142,6 +142,20 @@
   .sensor-oor { color: var(--imminent); }
   .sensor-skewed { color: var(--near); }
   .sensor-missing { color: var(--unknown); }
+
+  /* ── Annunciator pulse ────────────────────────────
+     Reserved exclusively for IMMINENT findings — the only motion on the
+     board, so it stays meaningful (P4: alert fatigue is a first-class
+     concern). Rings pulse; content never moves. */
+  @keyframes annunciator {
+    0%, 100% { opacity: 0.45; transform: scale(1); }
+    50% { opacity: 0.08; transform: scale(1.35); }
+  }
+  .animate-annunciator {
+    animation: annunciator 2s ease-in-out infinite;
+    transform-origin: center;
+    transform-box: fill-box;
+  }
 }
 
 @layer utilities {
