@@ -24,3 +24,20 @@ def test_injected_stale_gap_present() -> None:
     co_count = sum(1 for e in vizag_like().events()
                    if e["type"] == "reading" and e["sensorId"] == "CO-04")
     assert lel_count < co_count  # the gap means fewer LEL readings than CO
+
+
+def test_worker_fixes_emitted_and_deterministic() -> None:
+    events = list(vizag_like().events())
+    fixes = [e for e in events if e["type"] == "worker-location"]
+    assert fixes, "vizag-like must emit worker-location fixes"
+    # Deterministic: two runs produce identical streams (replayable, P5).
+    assert fixes == [e for e in vizag_like().events() if e["type"] == "worker-location"]
+    # The welder converges on B-04 (the hot-work zone) by minute 10.
+    w101 = [e for e in fixes if e["workerId"] == "W-101"]
+    assert w101[0]["zoneId"] == "B-02"
+    assert w101[-1]["zoneId"] == "B-04"
+    # Every fix passes the worker-location contract.
+    from verge_contracts import ContractRegistry
+
+    reg = ContractRegistry()
+    assert all(reg.validate_event(e).valid for e in fixes)

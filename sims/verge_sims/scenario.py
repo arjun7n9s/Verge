@@ -40,6 +40,32 @@ class SensorSpec:
 
 
 @dataclass
+class WorkerSpec:
+    """A deterministic crew member: a route of (zoneId, from_min) waypoints.
+
+    The worker is in the zone of the latest waypoint whose from_min <= m —
+    a piecewise-constant walk, reproducible in every replay (no randomness).
+    Fix cadence mimics an RTLS/badging provider (omlox-style zone presence).
+    """
+
+    worker_id: str
+    name: str
+    role: str
+    route: list[tuple[str, float]]  # [(zoneId, from_min), ...] sorted by from_min
+    cadence_s: float = 60.0
+    source: str = "sim-rtls"
+
+    def zone_at(self, m: float) -> str | None:
+        zone = None
+        for zone_id, from_min in self.route:
+            if m >= from_min:
+                zone = zone_id
+            else:
+                break
+        return zone
+
+
+@dataclass
 class Scenario:
     name: str
     t0: datetime
@@ -51,6 +77,7 @@ class Scenario:
     # durationMin) plus permitId/kind/zoneId. Takes precedence over permit_at_min.
     permits: list[dict] | None = None
     changeover: tuple[float, float] | None = None  # (start_min, end_min)
+    workers: list[WorkerSpec] = field(default_factory=list)
     step_s: float = 30.0
 
     def _permit_specs(self) -> list[dict]:
@@ -85,6 +112,15 @@ class Scenario:
                     continue
                 yield {"type": "reading", "ts": ts, "sensorId": s.sensor_id,
                        "kind": s.kind, "unit": s.unit, "zoneId": s.zone_id, "value": s.value(m)}
+            for w in self.workers:
+                # Emit a fix on the worker's own cadence grid, not every step.
+                if (i * self.step_s) % w.cadence_s != 0:
+                    continue
+                zone = w.zone_at(m)
+                if zone is None:
+                    continue
+                yield {"type": "worker-location", "ts": ts, "workerId": w.worker_id,
+                       "zoneId": zone, "name": w.name, "role": w.role, "source": w.source}
 
 
 def vizag_like() -> Scenario:
@@ -102,6 +138,20 @@ def vizag_like() -> Scenario:
         permit={"permitId": "PW-2025-0142", "kind": "hot-work", "zoneId": "B-04",
                 "equipmentId": "charging-car-hydraulics"},
         changeover=(12.0, 30.0),
+        workers=[
+            # The hot-work crew converges on B-04 — exactly the exposure the
+            # compound finding should count.
+            WorkerSpec("W-101", "S. Rao", "welder",
+                       [("B-02", 0.0), ("B-03", 6.0), ("B-04", 10.0)]),
+            WorkerSpec("W-102", "M. Devi", "fire-watch",
+                       [("B-03", 0.0), ("B-04", 10.0)]),
+            WorkerSpec("W-103", "K. Prasad", "operator", [("B-04", 0.0)]),
+            WorkerSpec("W-104", "A. Kumar", "supervisor",
+                       [("B-01", 0.0), ("B-02", 15.0), ("B-03", 25.0)]),
+            WorkerSpec("W-105", "R. Singh", "operator", [("B-05", 0.0)]),
+            WorkerSpec("W-106", "P. Naidu", "maintenance",
+                       [("B-01", 0.0), ("B-05", 20.0)]),
+        ],
     )
 
 
