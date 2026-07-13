@@ -4,6 +4,7 @@ import { FindingsBoard } from '@/components/organisms/FindingsBoard';
 import { FindingFilters } from '@/components/molecules/FindingFilters';
 import { SuppressionSuggestion } from '@/components/organisms/SuppressionSuggestion';
 import { ResponseOrchestratorPanel } from '@/components/organisms/ResponseOrchestratorPanel';
+import { EmergencyPanel } from '@/components/organisms/EmergencyPanel';
 import { PanelSystem } from '@/components/organisms/PanelSystem';
 import { getFindings } from '@/api';
 import { useFindingsStream } from '@/hooks/useFindingsStream';
@@ -160,7 +161,12 @@ export default function FindingsView() {
           <PanelSystem
             findings={filteredFindings}
             boardComponent={<FindingsBoard findings={filteredFindings} onChange={loadData} />}
-            responseComponent={<ResponseOrchestratorPanel activeFindings={findings} onChange={loadData} />}
+            responseComponent={
+              <div className="flex flex-col gap-3">
+                <EmergencyPanel activeFindings={findings} onChange={loadData} />
+                <ResponseOrchestratorPanel activeFindings={findings} onChange={loadData} />
+              </div>
+            }
           />
         )}
       </div>
