@@ -126,6 +126,48 @@ export async function getComplianceReport(signal?: AbortSignal): Promise<Complia
   return request<ComplianceReport>('/api/compliance/report', { signal });
 }
 
+export interface CorrectiveAction {
+  actionId: string;
+  source: string;
+  title: string;
+  requirement: string;
+  controlTier: string;
+  state: 'open' | 'in-progress' | 'pending-verification' | 'closed-effective' | 'reopened';
+  clauseId: string | null;
+  findingId: string | null;
+  standard: string | null;
+  owner: string | null;
+  due: string | null;
+  createdAt: string;
+  history: { from: string; to: string; actor: string; note: string; ts: string }[];
+}
+
+export async function listCorrectiveActions(
+  signal?: AbortSignal,
+): Promise<{ actions: CorrectiveAction[]; total: number; openCount: number }> {
+  return request('/api/compliance/actions', { signal });
+}
+
+export async function generateCorrectiveActions(): Promise<{
+  created: CorrectiveAction[];
+  count: number;
+  note: string | null;
+}> {
+  return request('/api/compliance/actions/generate', { method: 'POST' });
+}
+
+export async function transitionCorrectiveAction(
+  actionId: string,
+  to: string,
+  actor: string,
+  note?: string,
+): Promise<CorrectiveAction> {
+  return request(`/api/compliance/actions/${encodeURIComponent(actionId)}/transition`, {
+    method: 'POST',
+    body: JSON.stringify({ to, actor, note }),
+  });
+}
+
 export async function getModelRegistry(signal?: AbortSignal): Promise<ModelRegistry> {
   return request<ModelRegistry>('/api/models', { signal });
 }

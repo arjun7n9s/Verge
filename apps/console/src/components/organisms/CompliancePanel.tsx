@@ -1,8 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card } from '@/components/atoms';
-import { AlertCircle, Scale, ChevronRight, CircleCheck, CircleAlert } from 'lucide-react';
-import { getComplianceReport, type ComplianceClause } from '@/api/platform';
+import { Card, Button } from '@/components/atoms';
+import { AlertCircle, Scale, ChevronRight, CircleCheck, CircleAlert, ClipboardList } from 'lucide-react';
+import {
+  getComplianceReport,
+  listCorrectiveActions,
+  generateCorrectiveActions,
+  transitionCorrectiveAction,
+  type ComplianceClause,
+  type CorrectiveAction,
+} from '@/api/platform';
 import clsx from 'clsx';
+
+const NEXT_STATE: Record<string, { to: string; label: string; needsNote?: boolean }> = {
+  open: { to: 'in-progress', label: 'Start' },
+  'in-progress': { to: 'pending-verification', label: 'Submit for verification' },
+  'pending-verification': { to: 'closed-effective', label: 'Verify + close', needsNote: true },
+  reopened: { to: 'in-progress', label: 'Restart' },
+};
+
+const STATE_COLOR: Record<string, string> = {
+  open: 'text-near border-near/30 bg-near/10',
+  'in-progress': 'text-watch border-watch/30 bg-watch/10',
+  'pending-verification': 'text-accent border-accent/30 bg-accent/10',
+  'closed-effective': 'text-ok border-ok/30 bg-ok/10',
+  reopened: 'text-imminent border-imminent/30 bg-imminent/10',
+};
 
 /* Regulatory compliance drill-down (OISD / Factory Act / DGMS).
    Renders the deterministic gap report from services/compliance — every
@@ -24,6 +46,15 @@ export function CompliancePanel() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [openClause, setOpenClause] = useState<string | null>(null);
+  const [actions, setActions] = useState<CorrectiveAction[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [actor] = useState('safety-engineer');
+
+  const loadActions = () => {
+    listCorrectiveActions()
+      .then((r) => setActions(r.actions))
+      .catch(() => setActions([]));
+  };
 
   useEffect(() => {
     getComplianceReport()
@@ -35,7 +66,34 @@ export function CompliancePanel() {
         setReport(null);
         setError('Compliance API unavailable.');
       });
+    loadActions();
   }, []);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      await generateCorrectiveActions();
+      loadActions();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const advance = async (a: CorrectiveAction) => {
+    const next = NEXT_STATE[a.state];
+    if (!next) return;
+    const note = next.needsNote
+      ? window.prompt('Verification note (clause 10.2 — required to close):') ?? ''
+      : '';
+    if (next.needsNote && !note.trim()) return;
+    setBusy(true);
+    try {
+      await transitionCorrectiveAction(a.actionId, next.to, actor, note);
+      loadActions();
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const clauses = useMemo(() => {
     if (!report) return [];
@@ -149,6 +207,60 @@ export function CompliancePanel() {
             })}
             {clauses.length === 0 && (
               <span className="text-micro font-mono text-ink-dim py-2">No clauses match this filter.</span>
+            )}
+          </div>
+
+          {/* Corrective actions (CAPA, ISO 45001 10.2) */}
+          <div className="border-t border-line pt-2 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-micro font-mono font-bold text-ink-dim uppercase flex items-center gap-1">
+                <ClipboardList className="h-3 w-3" />
+                Corrective actions ({actions.filter((a) => a.state !== 'closed-effective').length} open)
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={busy}
+                onClick={generate}
+                className="text-micro h-5 px-1.5"
+                title="Create one action per open gap (idempotent)"
+              >
+                Generate from gaps
+              </Button>
+            </div>
+            {actions.length > 0 && (
+              <div className="flex flex-col gap-1 max-h-40 overflow-y-auto scrollbar">
+                {actions.map((a) => (
+                  <div
+                    key={a.actionId}
+                    className="flex items-center gap-2 bg-panel border border-line rounded px-1.5 py-1 font-mono text-micro"
+                  >
+                    <span
+                      className={clsx(
+                        'px-1.5 py-0.5 rounded-sm border font-bold uppercase shrink-0',
+                        STATE_COLOR[a.state] ?? 'text-ink-dim border-line',
+                      )}
+                    >
+                      {a.state}
+                    </span>
+                    <span className="text-ink truncate flex-1" title={a.requirement}>
+                      {a.title}
+                    </span>
+                    <span className="text-ink-dim shrink-0">{a.controlTier}</span>
+                    {NEXT_STATE[a.state] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => advance(a)}
+                        className="text-micro h-5 px-1.5 shrink-0 text-accent hover:bg-accent/10"
+                      >
+                        {NEXT_STATE[a.state].label}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </>
