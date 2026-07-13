@@ -12,6 +12,12 @@ zones:
 equipment:
   - {id: charging-car-hydraulics, name: "Charging-car hydraulic line", kind: hydraulic, zone: B-04}
 
+# Designated assembly points (mustering). Anchored at both ends of the battery
+# row so an incident anywhere leaves at least one reachable muster point.
+musterPoints:
+  - {id: MP-WEST, name: "West gate assembly point", zone: B-01}
+  - {id: MP-EAST, name: "East gate assembly point", zone: B-05}
+
 sensors:
   - {id: LEL-04, kind: gas-lel, unit: "%LEL", zone: B-04, threshold: 100, cadenceS: 30}
   - {id: CO-04, kind: gas-co, unit: ppm, zone: B-04, threshold: 50, cadenceS: 30}

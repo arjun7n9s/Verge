@@ -43,12 +43,26 @@ class EquipmentNode:
     zone_id: str
 
 
+@dataclass(frozen=True)
+class MusterPoint:
+    """A designated assembly point, anchored to the zone it sits in/beside.
+
+    Safety-by-location is relative: a muster point is only usable when its
+    anchor zone is not itself affected — the emergency router checks that.
+    """
+
+    muster_id: str
+    name: str
+    zone_id: str
+
+
 @dataclass
 class PlantModel:
     name: str
     zones: dict[str, ZoneNode] = field(default_factory=dict)
     sensors: dict[str, SensorNode] = field(default_factory=dict)
     equipment: dict[str, EquipmentNode] = field(default_factory=dict)
+    muster_points: dict[str, MusterPoint] = field(default_factory=dict)
 
     def adjacency(self) -> dict[str, set[str]]:
         """zone -> set of neighbouring zones (symmetric, for SIMOPS detection)."""
@@ -91,4 +105,11 @@ def load_plant(path: str | Path = DEMO_PLANT) -> PlantModel:
         e["id"]: EquipmentNode(e["id"], e.get("name", e["id"]), e.get("kind", ""), e["zone"])
         for e in doc.get("equipment", [])
     }
-    return PlantModel(name=doc["name"], zones=zones, sensors=sensors, equipment=equipment)
+    muster_points = {
+        m["id"]: MusterPoint(m["id"], m.get("name", m["id"]), m["zone"])
+        for m in doc.get("musterPoints", [])
+    }
+    return PlantModel(
+        name=doc["name"], zones=zones, sensors=sensors,
+        equipment=equipment, muster_points=muster_points,
+    )

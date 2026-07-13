@@ -11,9 +11,11 @@ from .commission import (
     validate_layout,
 )
 from .export import demo_geojson, geojson_for_plant
+from .occupancy import OccupancyTracker, WorkerFix
 from .plant import (
     DEMO_PLANT,
     EquipmentNode,
+    MusterPoint,
     PlantModel,
     SensorNode,
     ZoneNode,
@@ -24,9 +26,12 @@ __all__ = [
     "DEMO_PLANT",
     "EquipmentNode",
     "LayoutReport",
+    "MusterPoint",
+    "OccupancyTracker",
     "PlantModel",
     "SensorMapping",
     "SensorNode",
+    "WorkerFix",
     "ZoneGeometry",
     "ZoneNode",
     "build_plant_model",
