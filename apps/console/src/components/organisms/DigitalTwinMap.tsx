@@ -3,10 +3,11 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { RiskFinding } from '@/types';
 import type { PlantGeoJson } from '@/api/plant';
-import { getPlantGeoJson, getZoneExclusion } from '@/api';
+import { getPlantGeoJson, getZoneExclusion, listWorkers } from '@/api';
 import type { PlumeExclusionFeature } from '@/api/platform';
+import type { WorkersSnapshot } from '@/api/workers';
 import { Card, Badge, Button } from '@/components/atoms';
-import { Shield, Radio, Compass, Layers, AlertCircle, Wind } from 'lucide-react';
+import { Shield, Radio, Compass, Layers, AlertCircle, Wind, Users } from 'lucide-react';
 import {
   centroidsByZone,
   enrichPlantGeoJson,
@@ -37,8 +38,9 @@ const LOCAL_STYLE: maplibregl.StyleSpecification = {
 export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const [activeLayers, setActiveLayers] = useState<string[]>(['zones', 'sensors', 'findings', 'plume']);
+  const [activeLayers, setActiveLayers] = useState<string[]>(['zones', 'sensors', 'findings', 'plume', 'workers']);
   const [plantBase, setPlantBase] = useState<PlantGeoJson | null>(null);
+  const [workers, setWorkers] = useState<WorkersSnapshot | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [plumeZoneId, setPlumeZoneId] = useState<string | null>(null);
   const [plumeFeature, setPlumeFeature] = useState<PlumeExclusionFeature | null>(null);
@@ -82,8 +84,15 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
         next[finding.findingId] = { x: p.x, y: p.y };
       }
     }
+    for (const zoneId of Object.keys(workers?.byZone ?? {})) {
+      const c = centroids[zoneId];
+      if (c) {
+        const p = map.project(c);
+        next[`workers:${zoneId}`] = { x: p.x, y: p.y };
+      }
+    }
     setMarkerPositions(next);
-  }, [sensors, findings, centroids]);
+  }, [sensors, findings, centroids, workers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +110,26 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
       });
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Worker layer poll — zone presence refreshes on the RTLS cadence.
+  useEffect(() => {
+    let cancelled = false;
+    const tick = () => {
+      listWorkers()
+        .then((snap) => {
+          if (!cancelled) setWorkers(snap);
+        })
+        .catch(() => {
+          if (!cancelled) setWorkers(null);
+        });
+    };
+    tick();
+    const interval = setInterval(tick, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -299,6 +328,7 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
               { id: 'sensors', label: 'IoT Sensors', icon: <Radio className="h-3.5 w-3.5" /> },
               { id: 'findings', label: 'Active Risks', icon: <Shield className="h-3.5 w-3.5" /> },
               { id: 'plume', label: 'Gas Plume', icon: <Wind className="h-3.5 w-3.5" /> },
+              { id: 'workers', label: 'Workers', icon: <Users className="h-3.5 w-3.5" /> },
             ].map((layer) => (
               <button
                 key={layer.id}
@@ -384,6 +414,34 @@ export function DigitalTwinMap({ findings }: DigitalTwinMapProps) {
                 }}
                 title={`${sensor.id}: ${sensor.value}`}
               />
+            );
+          })}
+        </div>
+      )}
+
+      {activeLayers.includes('workers') && workers && (
+        <div className="absolute inset-0 pointer-events-none z-10">
+          {Object.entries(workers.byZone).map(([zoneId, zoneWorkers]) => {
+            const pos = markerPositions[`workers:${zoneId}`];
+            if (!pos) return null;
+            const staleCount = zoneWorkers.filter((w) => w.stale).length;
+            return (
+              <div
+                key={`workers-${zoneId}`}
+                className="absolute -translate-x-1/2 flex items-center gap-1 bg-panel/90 border border-line rounded-full px-1.5 py-0.5 font-mono text-micro text-ink"
+                style={{ left: pos.x, top: pos.y + 14 }}
+                title={zoneWorkers
+                  .map((w) => `${w.name || w.workerId} (${w.role || 'worker'})${w.stale ? ' — STALE' : ''}`)
+                  .join('\n')}
+              >
+                <Users className="h-3 w-3 text-watch" />
+                <span className="font-bold tabular-nums">{zoneWorkers.length}</span>
+                {staleCount > 0 && (
+                  <span className="text-unknown tabular-nums" title={`${staleCount} stale fixes`}>
+                    ({staleCount}?)
+                  </span>
+                )}
+              </div>
             );
           })}
         </div>

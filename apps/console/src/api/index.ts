@@ -71,3 +71,5 @@ export { createSSEConnection } from './sse';
 export type { SSEEventHandler } from './sse';
 export { listReplays, getReplay } from './replays';
 export type { ReplaySummary, ReplayEvent, ReplayTimeline } from './replays';
+export { listWorkers, getFindingExposure } from './workers';
+export type { WorkerPosition, WorkersSnapshot, FindingExposure } from './workers';
