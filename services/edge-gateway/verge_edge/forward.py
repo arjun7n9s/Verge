@@ -33,6 +33,16 @@ def forward_to_api(base_url: str, event: dict, *, timeout: float = 5.0) -> None:
             "validTo": event["validTo"],
             "status": event.get("status", "open"),
         }
+    elif event.get("type") == "worker-location":
+        url = f"{base}/api/workers/ingest"
+        body = {
+            "ts": event["ts"],
+            "workerId": event["workerId"],
+            "zoneId": event["zoneId"],
+            "name": event.get("name"),
+            "role": event.get("role"),
+            "source": event.get("source"),
+        }
     else:
         return
 
