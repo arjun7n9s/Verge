@@ -19,6 +19,7 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
+from verge_compliance import ActionsLog
 from verge_llm import provider_from_env
 from verge_mlops import DEMO_REGISTRY, ModelRegistry
 from verge_mlops.canary import parse_canary_zones
@@ -28,25 +29,29 @@ from verge_schema.enums import FeedbackVerdict
 from verge_schema.enums import FindingState as S
 from verge_schema.findings import RiskFinding
 from verge_schema.lifecycle import IllegalTransition
-from verge_twin import load_plant
+from verge_twin import OccupancyTracker, load_plant
 from verge_twin.plant import DEMO_PLANT
 from verge_vision import provider_from_env as vision_provider_from_env
 
 from .auth import AuthMiddleware
+from .emergency import EmergencyManager
 from .evidence_store import upload_evidence_manifest
 from .factory import make_store
 from .hooks import maybe_ingest_closed_finding, maybe_ingest_feedback
 from .ops import ops_snapshot, render_prometheus
 from .redpanda_fanout import start_redpanda_fanout
+from .routes.actions import router as actions_router
 from .routes.alerts import router as alerts_router
 from .routes.commission import router as commission_router
 from .routes.compliance import router as compliance_router
 from .routes.contracts import router as contracts_router
 from .routes.degradation import router as degradation_router
+from .routes.emergency import router as emergency_router
 from .routes.eval_report import router as eval_report_router
 from .routes.evidence import router as evidence_router
 from .routes.fatigue import router as fatigue_router
 from .routes.fleet import router as fleet_router
+from .routes.investigate import router as investigate_router
 from .routes.memory import router as memory_router
 from .routes.models import router as models_router
 from .routes.ops import router as ops_router
@@ -60,6 +65,7 @@ from .routes.reports import router as reports_router
 from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
+from .routes.workers import router as workers_router
 from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
 from .stream_bus import StreamBus
@@ -149,6 +155,10 @@ app.include_router(plant_router, prefix="/api")
 app.include_router(plant_graph_router, prefix="/api")
 app.include_router(readings_router, prefix="/api")
 app.include_router(replays_router, prefix="/api")
+app.include_router(workers_router, prefix="/api")
+app.include_router(emergency_router, prefix="/api")
+app.include_router(investigate_router, prefix="/api")
+app.include_router(actions_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
@@ -180,6 +190,10 @@ if not store.list_findings(shadow=None):
 app.state.permits.seed_demo(datetime.now(UTC))
 
 _demo_plant = load_plant(DEMO_PLANT)
+app.state.plant = _demo_plant
+app.state.occupancy = OccupancyTracker()
+app.state.emergency = EmergencyManager()
+app.state.actions = ActionsLog()
 app.state.readings = make_reading_buffer(store=store)
 app.state.readings.seed_from_replay()
 app.state.sensor_thresholds = _demo_plant.thresholds_by_kind()

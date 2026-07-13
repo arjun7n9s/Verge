@@ -5,6 +5,7 @@ description = "FastAPI gateway — findings, lifecycle, feedback, sensor ribbon,
 requires-python = ">=3.11"
 dependencies = [
     "verge-schema",
+    "verge-agents",
     "verge-audit",
     "verge-contracts",
     "verge-llm",
@@ -39,6 +40,7 @@ packages = ["verge_api"]
 
 [tool.uv.sources]
 verge-schema = { workspace = true }
+verge-agents = { workspace = true }
 verge-audit = { workspace = true }
 verge-contracts = { workspace = true }
 verge-llm = { workspace = true }
