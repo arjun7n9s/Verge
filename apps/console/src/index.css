@@ -2,26 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Verge Design System ──────────────────────────────────────────
-   "Linear meets Palantir Foundry" — neutral graphite/ink, one accent
-   for risk, dense tables, lineage chips. No glassmorphism, no emoji-as-UI.
+/* ── Verge Design System — "Instrument Paper" ─────────────────────
+   Engineering-document modernism: paper, ink, hairline rules, ONE
+   signal orange. Lineage: NASA GSM 1976 (one signal color, ruled
+   standardization) · Anduril (Swiss grid, monochrome discipline) ·
+   Braun/Teenage Engineering (instrument functionalism). No gradients,
+   no glassmorphism, no shadows except the floating layer.
+   Full spec: docs/design-system.md
    ───────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    --bg: #0B0E13;
-    --panel: #12161D;
-    --panel-2: #171D26;
-    --line: #262E39;
-    --line-2: #39434F;
-    --ink: #E8EDF4;
-    --ink-dim: #8C96A3;
-    --accent: #F0A83E;
-    --imminent: #FF5C5C;
-    --near: #F0A83E;
-    --watch: #4FA3C7;
-    --unknown: #6B7682;
-    --ok: #43C989;
+    --bg: #F4F3F0;
+    --panel: #FFFFFF;
+    --panel-2: #ECEBE7;
+    --line: #DEDCD5;
+    --line-2: #C6C3BA;
+    --ink: #16181C;
+    --ink-dim: #6E7178;
+    --accent: #D9480F;
+    --imminent: #C92A2A;
+    --near: #D9480F;
+    --watch: #1864AB;
+    --unknown: #868E96;
+    --ok: #2B8A3E;
+    --scrim: rgba(22, 24, 28, 0.34);
+    --shadow-float: 0 8px 24px rgba(22, 24, 28, 0.10);
 
     /* Spacing scale (4px base) */
     --space-1: 4px;
@@ -89,10 +95,10 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--bg);
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--line);
+    background: var(--line-2);
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
@@ -101,7 +107,7 @@
 
   /* Selection color */
   ::selection {
-    background: rgba(232, 163, 61, 0.25);
+    background: rgba(217, 72, 15, 0.18);
     color: var(--ink);
   }
 
@@ -125,8 +131,7 @@
     @apply bg-panel-2 border border-line rounded-md;
   }
 
-  /* Hover elevation: the premium move on dark surfaces is a lighter border,
-     never a drop shadow. */
+  /* Hover elevation: the border darkens one step — never scale, never shadow. */
   .hover-elevate {
     transition: border-color 150ms ease;
   }
@@ -134,10 +139,28 @@
     border-color: var(--line-2);
   }
 
+  /* The ONE shadow in the system — floating layers only (modal, palette,
+     toast, popover). Everything else sits flat on the paper. */
+  .float-layer {
+    box-shadow: var(--shadow-float);
+  }
+
+  /* Ruled header — micro-label with a hairline running to the edge, the
+     engineering-drawing title-block motif. */
+  .ruled-label {
+    @apply flex items-center gap-2 text-micro font-mono uppercase tracking-[0.12em] text-ink-dim select-none;
+  }
+  .ruled-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
   /* Keyboard chip (⌘K hints etc.) */
   .kbd {
     @apply inline-flex items-center justify-center h-[18px] min-w-[18px] px-1
-      rounded-sm border border-line bg-panel-2 font-mono text-micro text-ink-dim;
+      rounded-sm border border-line bg-panel font-mono text-micro text-ink-dim;
     box-shadow: inset 0 -1px 0 var(--line);
   }
 
@@ -152,10 +175,10 @@
   .band-watch { color: var(--watch); }
   .band-unknown { color: var(--unknown); }
 
-  .band-bg-imminent { background-color: rgba(240, 99, 99, 0.12); border-color: rgba(240, 99, 99, 0.3); }
-  .band-bg-near { background-color: rgba(232, 163, 61, 0.12); border-color: rgba(232, 163, 61, 0.3); }
-  .band-bg-watch { background-color: rgba(79, 163, 199, 0.12); border-color: rgba(79, 163, 199, 0.3); }
-  .band-bg-unknown { background-color: rgba(107, 118, 130, 0.12); border-color: rgba(107, 118, 130, 0.3); }
+  .band-bg-imminent { background-color: rgba(201, 42, 42, 0.08); border-color: rgba(201, 42, 42, 0.35); }
+  .band-bg-near { background-color: rgba(217, 72, 15, 0.08); border-color: rgba(217, 72, 15, 0.35); }
+  .band-bg-watch { background-color: rgba(24, 100, 171, 0.08); border-color: rgba(24, 100, 171, 0.35); }
+  .band-bg-unknown { background-color: rgba(134, 142, 150, 0.10); border-color: rgba(134, 142, 150, 0.35); }
 
   /* ── Sensor State Indicators ──────────────────── */
   .sensor-live { color: var(--ok); }

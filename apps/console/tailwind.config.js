@@ -4,16 +4,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#0B0E13',
-        panel: { DEFAULT: '#12161D', '2': '#171D26' },
-        line: { DEFAULT: '#262E39', '2': '#39434F' },
-        ink: { DEFAULT: '#E8EDF4', dim: '#8C96A3' },
-        accent: '#F0A83E',
-        imminent: '#FF5C5C',
-        near: '#F0A83E',
-        watch: '#4FA3C7',
-        unknown: '#6B7682',
-        ok: '#43C989',
+        bg: '#F4F3F0',
+        panel: { DEFAULT: '#FFFFFF', '2': '#ECEBE7' },
+        line: { DEFAULT: '#DEDCD5', '2': '#C6C3BA' },
+        ink: { DEFAULT: '#16181C', dim: '#6E7178' },
+        accent: '#D9480F',
+        imminent: '#C92A2A',
+        near: '#D9480F',
+        watch: '#1864AB',
+        unknown: '#868E96',
+        ok: '#2B8A3E',
       },
       fontFamily: {
         sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
@@ -34,7 +34,7 @@ export default {
         '3': '12px', '3.5': '14px', '4': '16px', '5': '20px', '6': '24px', '8': '32px',
       },
       borderRadius: {
-        sm: '4px', DEFAULT: '6px', md: '8px', lg: '12px',
+        sm: '2px', DEFAULT: '4px', md: '6px', lg: '8px',
       },
       transitionDuration: {
         fast: '150ms', DEFAULT: '200ms', slow: '300ms',
