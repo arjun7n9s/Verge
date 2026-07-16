@@ -3,6 +3,7 @@ import type { RiskFinding, FeedbackVerdict } from '@/types';
 import { transitionFinding } from '@/api';
 import { Badge, Button, Card } from '@/components/atoms';
 import { LeadTimeGauge } from '@/components/molecules/LeadTimeGauge';
+import { toast } from '@/stores/toasts';
 import {
   AlertTriangle,
   User,
@@ -59,9 +60,11 @@ export function FindingCard({
     setIsTransitioning(true);
     try {
       await transitionFinding(finding.findingId, 'acknowledged', 'Acknowledged by operator');
+      toast.ok(`${finding.findingId} acknowledged`);
       onChange();
     } catch (err) {
       console.error('[FindingCard] Ack failure:', err);
+      toast.error(`Failed to acknowledge ${finding.findingId}`);
     } finally {
       setIsTransitioning(false);
     }
@@ -72,7 +75,7 @@ export function FindingCard({
       role="article"
       aria-labelledby={`finding-${finding.findingId}-title`}
       className={clsx(
-        'flex flex-col gap-3 relative overflow-hidden transition-all duration-fast select-text',
+        'group flex flex-col gap-3 relative overflow-hidden transition-all duration-fast select-text',
         // Highlights card outline when imminent risk and not closed
         finding.leadTimeBand === 'IMMINENT' && finding.state !== 'closed' && 'border-imminent/40 hover:border-imminent/70'
       )}
@@ -88,18 +91,18 @@ export function FindingCard({
       />
 
       {/* Card Header metadata */}
-      <header className="flex items-center justify-between gap-2 text-xs font-mono select-none">
+      <header className="flex items-center justify-between gap-2 text-micro font-mono select-none">
         <div className="flex items-center gap-1.5">
-          <span className="text-ink font-semibold">{finding.zoneId}</span>
+          <span className="text-ink-dim font-medium tracking-[0.06em]">{finding.zoneId}</span>
           {finding.shadow && (
             <Badge variant="generic" color="near" className="text-micro font-bold border-dashed">
               SHADOW
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-ink-dim">
-          <span className="tabular-nums">CONF: {(finding.confidence * 100).toFixed(0)}%</span>
-        </div>
+        <span className="tabular-nums text-ink-dim/70" title="Detection confidence">
+          {(finding.confidence * 100).toFixed(0)}%
+        </span>
       </header>
 
       {/* Signature lead-time tape (replaces the band badge) */}
@@ -204,8 +207,8 @@ export function FindingCard({
           )}
         </div>
 
-        {/* Feedback thumbs */}
-        <div className="flex items-center gap-1">
+        {/* Feedback thumbs — recede until the card is hovered */}
+        <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity duration-fast">
           <Button
             variant="ghost"
             size="sm"

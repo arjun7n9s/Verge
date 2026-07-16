@@ -9,6 +9,7 @@ import {
   type EmergencyStatus,
 } from '@/api/emergency';
 import { Siren, ShieldCheck, MapPin, UserCheck, AlertTriangle } from 'lucide-react';
+import { toast } from '@/stores/toasts';
 import clsx from 'clsx';
 
 /* Emergency mode console (spec §4.4). Declaration freezes evidence, computes
@@ -47,14 +48,17 @@ export function EmergencyPanel({ activeFindings, onChange }: EmergencyPanelProps
     [activeFindings],
   );
 
-  const act = async (fn: () => Promise<EmergencyStatus>) => {
+  const act = async (fn: () => Promise<EmergencyStatus>, okMessage?: string) => {
     setBusy(true);
     setError(null);
     try {
       setStatus(await fn());
+      if (okMessage) toast.ok(okMessage);
       onChange?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Action failed');
+      const msg = err instanceof Error ? err.message : 'Action failed';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -97,7 +101,12 @@ export function EmergencyPanel({ activeFindings, onChange }: EmergencyPanelProps
               size="sm"
               disabled={!selectedFinding || !approver.trim() || busy}
               loading={busy}
-              onClick={() => act(() => declareEmergency(selectedFinding, approver.trim()))}
+              onClick={() =>
+                act(
+                  () => declareEmergency(selectedFinding, approver.trim()),
+                  'Emergency declared — evidence frozen, muster open',
+                )
+              }
               className="text-micro font-bold uppercase shrink-0"
             >
               Declare
@@ -127,7 +136,7 @@ export function EmergencyPanel({ activeFindings, onChange }: EmergencyPanelProps
           variant="secondary"
           size="sm"
           disabled={busy || !approver.trim()}
-          onClick={() => act(() => emergencyStandDown(approver.trim()))}
+          onClick={() => act(() => emergencyStandDown(approver.trim()), 'Emergency stood down')}
           className="text-micro font-bold uppercase h-6"
           title={approver.trim() ? 'Stand down' : 'Enter approver name below first'}
         >

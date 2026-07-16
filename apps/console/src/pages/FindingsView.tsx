@@ -5,6 +5,7 @@ import { FindingFilters } from '@/components/molecules/FindingFilters';
 import { SuppressionSuggestion } from '@/components/organisms/SuppressionSuggestion';
 import { ResponseOrchestratorPanel } from '@/components/organisms/ResponseOrchestratorPanel';
 import { EmergencyPanel } from '@/components/organisms/EmergencyPanel';
+import { FindingCardSkeleton } from '@/components/atoms';
 import { PanelSystem } from '@/components/organisms/PanelSystem';
 import { getFindings } from '@/api';
 import { useFindingsStream } from '@/hooks/useFindingsStream';
@@ -154,8 +155,13 @@ export default function FindingsView() {
         <SuppressionSuggestion activeFindings={findings} onChange={loadData} />
 
         {isLoading && findings.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-bg/50">
-            <span className="text-xs text-ink-dim font-mono animate-pulse">LOADING TELETREAD BOARD...</span>
+          <div className="flex gap-3 h-full px-1" aria-label="Loading findings">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex-1 flex flex-col gap-2 bg-panel/30 border border-line rounded-md p-2">
+                <FindingCardSkeleton />
+                {i % 2 === 0 && <FindingCardSkeleton />}
+              </div>
+            ))}
           </div>
         ) : (
           <PanelSystem

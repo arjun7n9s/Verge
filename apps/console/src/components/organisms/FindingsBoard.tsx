@@ -1,19 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { RiskFinding, FindingState, FeedbackVerdict } from '@/types';
 import { FindingCard } from '@/components/organisms/FindingCard';
 import { SnoozeDialog } from '@/components/molecules/SnoozeDialog';
 import { AssignDialog } from '@/components/molecules/AssignDialog';
 import { FeedbackModal } from '@/components/molecules/FeedbackModal';
 import { FindingDetailModal } from '@/components/organisms/FindingDetailModal';
+import { EmptyState } from '@/components/atoms';
+import { useFindingsStore } from '@/stores/findings';
+import { Inbox } from 'lucide-react';
 import clsx from 'clsx';
 
 const COLUMNS: { state: FindingState; label: string; headerColor: string }[] = [
-  { state: 'new', label: 'NEW ALERT', headerColor: 'border-t-[3px] border-t-imminent' },
-  { state: 'acknowledged', label: 'ACKNOWLEDGED', headerColor: 'border-t-[3px] border-t-near' },
-  { state: 'assigned', label: 'ASSIGNED', headerColor: 'border-t-[3px] border-t-watch' },
-  { state: 'in-progress', label: 'IN PROGRESS', headerColor: 'border-t-[3px] border-t-accent' },
-  { state: 'escalated', label: 'ESCALATED', headerColor: 'border-t-[3px] border-t-imminent' },
-  { state: 'resolved', label: 'RESOLVED', headerColor: 'border-t-[3px] border-t-ok' },
+  { state: 'new', label: 'New', headerColor: 'border-t-2 border-t-imminent' },
+  { state: 'acknowledged', label: 'Acknowledged', headerColor: 'border-t-2 border-t-near' },
+  { state: 'assigned', label: 'Assigned', headerColor: 'border-t-2 border-t-watch' },
+  { state: 'in-progress', label: 'In progress', headerColor: 'border-t-2 border-t-accent' },
+  { state: 'escalated', label: 'Escalated', headerColor: 'border-t-2 border-t-imminent' },
+  { state: 'resolved', label: 'Resolved', headerColor: 'border-t-2 border-t-ok' },
 ];
 
 interface FindingsBoardProps {
@@ -27,6 +30,15 @@ export function FindingsBoard({ findings, onChange }: FindingsBoardProps) {
   const [feedbackFinding, setFeedbackFinding] = useState<RiskFinding | null>(null);
   const [feedbackVerdict, setFeedbackVerdict] = useState<FeedbackVerdict | null>(null);
   const [detailFinding, setDetailFinding] = useState<RiskFinding | null>(null);
+  const { selectedId, setSelectedId } = useFindingsStore();
+
+  // The command palette selects a finding by id; open its detail modal here.
+  useEffect(() => {
+    if (!selectedId) return;
+    const hit = findings.find((f) => f.findingId === selectedId);
+    if (hit) setDetailFinding(hit);
+    setSelectedId(null);
+  }, [selectedId, findings, setSelectedId]);
 
   const handleOpenFeedback = (finding: RiskFinding, verdict: FeedbackVerdict) => {
     setFeedbackFinding(finding);
@@ -48,11 +60,18 @@ export function FindingsBoard({ findings, onChange }: FindingsBoardProps) {
               )}
             >
               {/* Column Header */}
-              <div className="h-10 px-3 border-b border-line bg-panel-2/50 flex items-center justify-between shrink-0 select-none">
-                <span className="text-micro font-mono font-bold text-ink uppercase tracking-wider">
+              <div className="h-9 px-3 border-b border-line flex items-center justify-between shrink-0 select-none">
+                <span className="text-micro font-mono font-medium text-ink-dim uppercase tracking-[0.1em]">
                   {label}
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-line text-micro font-mono text-ink-dim font-bold tabular-nums">
+                <span
+                  className={clsx(
+                    'min-w-[20px] h-[18px] px-1 inline-flex items-center justify-center rounded-sm border text-micro font-mono tabular-nums',
+                    items.length > 0
+                      ? 'border-line text-ink bg-panel-2'
+                      : 'border-transparent text-ink-dim/40'
+                  )}
+                >
                   {items.length}
                 </span>
               </div>
@@ -60,11 +79,11 @@ export function FindingsBoard({ findings, onChange }: FindingsBoardProps) {
               {/* Column Cards Container */}
               <div className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 scrollbar select-text">
                 {items.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center border border-dashed border-line/50 rounded-sm p-4 text-center">
-                    <span className="text-micro font-mono text-ink-dim/40 uppercase">
-                      NO ACTIVE FINDINGS
-                    </span>
-                  </div>
+                  <EmptyState
+                    icon={<Inbox />}
+                    title="Nothing here"
+                    className="flex-1 border-line/50"
+                  />
                 ) : (
                   items.map((f) => (
                     <FindingCard
