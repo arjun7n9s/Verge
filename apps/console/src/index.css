@@ -13,6 +13,7 @@
     --panel: #12161D;
     --panel-2: #171D26;
     --line: #262E39;
+    --line-2: #39434F;
     --ink: #E8EDF4;
     --ink-dim: #8C96A3;
     --accent: #F0A83E;
@@ -122,6 +123,27 @@
 
   .surface-2 {
     @apply bg-panel-2 border border-line rounded-md;
+  }
+
+  /* Hover elevation: the premium move on dark surfaces is a lighter border,
+     never a drop shadow. */
+  .hover-elevate {
+    transition: border-color 150ms ease;
+  }
+  .hover-elevate:hover {
+    border-color: var(--line-2);
+  }
+
+  /* Keyboard chip (⌘K hints etc.) */
+  .kbd {
+    @apply inline-flex items-center justify-center h-[18px] min-w-[18px] px-1
+      rounded-sm border border-line bg-panel-2 font-mono text-micro text-ink-dim;
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   /* ── Lead Time Band Colors ────────────────────── */

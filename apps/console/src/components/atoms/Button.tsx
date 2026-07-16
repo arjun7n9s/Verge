@@ -52,7 +52,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={clsx(
           'inline-flex items-center justify-center',
           'border font-medium',
-          'transition-colors duration-fast',
+          'transition-[color,background-color,border-color,transform] duration-fast',
+          'active:scale-[0.98]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
           'cursor-pointer select-none',
           variantStyles[variant],

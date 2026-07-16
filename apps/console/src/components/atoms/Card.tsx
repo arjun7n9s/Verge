@@ -12,7 +12,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={clsx(
-          'surface-1 p-4',
+          'surface-1 p-4 hover-elevate',
           'transition-colors duration-fast',
           interactive && 'hover:bg-panel-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
           className

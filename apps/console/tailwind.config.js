@@ -6,7 +6,7 @@ export default {
       colors: {
         bg: '#0B0E13',
         panel: { DEFAULT: '#12161D', '2': '#171D26' },
-        line: '#262E39',
+        line: { DEFAULT: '#262E39', '2': '#39434F' },
         ink: { DEFAULT: '#E8EDF4', dim: '#8C96A3' },
         accent: '#F0A83E',
         imminent: '#FF5C5C',
