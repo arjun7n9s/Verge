@@ -108,8 +108,9 @@ See [`docs/commissioning.md`](docs/commissioning.md) and
 day-2 surface distinct from the operator console (§14.6).
 
 See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.  
-See [`docs/PRODUCT_AUDIT_AND_ROADMAP.md`](docs/PRODUCT_AUDIT_AND_ROADMAP.md) for the dual-wedge product audit and summit roadmap.  
+See [`docs/PRODUCT_AUDIT_AND_ROADMAP.md`](docs/PRODUCT_AUDIT_AND_ROADMAP.md) for the dual-wedge product audit and summit roadmap.
 See [`docs/PHASED_BUILD_PLAN.md`](docs/PHASED_BUILD_PLAN.md) for phase-by-phase build detail, OSS/paid stack, and usefulness DoDs.
+See [`docs/GENAI_ARCHITECTURE_AUDIT.md`](docs/GENAI_ARCHITECTURE_AUDIT.md) for the 2026 GenAI / agentic architecture audit (Phase 2.5).
 
 ## Status
 

@@ -7,7 +7,8 @@
 **Data posture:** Streams (sensors, CCTV, drone, radio, documents) will be supplied — plan assumes **real ingest**, not permanent mocks  
 **Tech posture:** OSS-first; paid only where usefulness demands it (Cognee, Speechmatics, aimlapi, Vultr already in-play).  
 
-**Deep phased plan (stack + DoD + week-by-week):** see [`PHASED_BUILD_PLAN.md`](./PHASED_BUILD_PLAN.md).
+**Deep phased plan (stack + DoD + week-by-week):** see [`PHASED_BUILD_PLAN.md`](./PHASED_BUILD_PLAN.md).  
+**GenAI / agentic audit (2026-07-18):** see [`GENAI_ARCHITECTURE_AUDIT.md`](./GENAI_ARCHITECTURE_AUDIT.md) — keep safety core LLM-free; deepen advisory orchestrator + GraphRAG + validators.
 
 ---
 
@@ -81,7 +82,7 @@ flowchart LR
 | Eval vs B0/B1/B2 + FNR | Demo-strong | `eval/` |
 | Twin / commissioning / plume / workers | Pilot skeleton | `services/twin` |
 | Emergency declare/muster/freeze | Pilot | API emergency + console |
-| Investigator agent (tool loop) | Pilot advisory | `packages/agents` |
+| Investigator agent (tool loop) | Pilot advisory → **upgrade to orchestrator + specialists (Phase 2.5)** | `packages/agents` |
 | Console Instrument Paper | Partial premium | `apps/console` |
 | Vision plane (Ultralytics + optional VLM PPE) | Scaffold | `services/vision` |
 | Voice (Speechmatics handover/near-miss) | Scaffold | `services/voice` |
@@ -437,7 +438,8 @@ Full week-by-week work, Usefulness DoD, and stack decisions live in
 | **0** | Foundation & truth gate; keys; pack IDs; schemas | 1 week |
 | **1** | Knowledge spine — Docling ingest, KG, cited copilot | 2–3 weeks |
 | **2** | Live fusion — sensors, CCTV/drone, radio → findings | 2–3 weeks (∥ 1) |
-| **3** | RCA / compliance / lessons agents | 2 weeks |
+| **2.5** | GenAI Core: orchestrator + GraphRAG + validators + agent evals | 1.5–2 weeks |
+| **3** | RCA / compliance / lessons as specialists under orchestrator | 2 weeks |
 | **4** | Multi-pack + premium Mission Control / Knowledge UI | 1.5–2 weeks |
 | **5** | Summit hardening, eval boards, dry-runs | 1 week |
 | **6** | Post-summit real plant scale | ongoing |

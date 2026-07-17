@@ -131,13 +131,16 @@ A feature ships only when **all** rows for that family are green.
 
 ```text
 Phase 0  Foundation & Truth          ~1 week
-Phase 1  Knowledge Spine MVP         ~2–3 weeks   ← biggest new usefulness
+Phase 1  Knowledge Spine MVP         ~2–3 weeks
 Phase 2  Live Fusion (sensors+CV+radio) ~2–3 weeks  (overlaps Phase 1)
-Phase 3  Agents Depth (RCA/compliance/lessons) ~2 weeks
+Phase 2.5 GenAI Core (orchestrator + GraphRAG + validators) ~1.5–2 weeks  ← NEW (see GENAI_ARCHITECTURE_AUDIT.md)
+Phase 3  Specialist Agents (RCA/compliance/lessons) ~2 weeks
 Phase 4  Multi-pack + Premium UI     ~1.5–2 weeks
 Phase 5  Summit Hardening & Proof    ~1 week
 Phase 6  Post-summit Plant Scale     ongoing
 ```
+
+**GenAI audit (2026-07-18):** [`GENAI_ARCHITECTURE_AUDIT.md`](./GENAI_ARCHITECTURE_AUDIT.md) — keep P1 safety core LLM-free; deepen advisory GenAI (orchestrator + specialists + GraphRAG + validators + agent evals).
 
 ```mermaid
 gantt
@@ -296,40 +299,65 @@ gantt
 
 ---
 
-## 8. Phase 3 — Agents Depth (~2 weeks)
+## 7.5 Phase 2.5 — GenAI Core (~1.5–2 weeks) **NEW**
 
-**Goal:** Maintenance, compliance, and lessons are **useful workflows**, not panels.
+**Goal:** Use modern advisory GenAI (2026 patterns) without polluting the safety core.  
+**Full rationale:** [`GENAI_ARCHITECTURE_AUDIT.md`](./GENAI_ARCHITECTURE_AUDIT.md).
 
-### 3A Maintenance & RCA agent
+| Track | Work | DoD |
+|---|---|---|
+| **G1 Orchestrator** | Evolve `packages/agents` Investigator → **Advisory Orchestrator** that fans out to specialists and merges a JSON brief | One finding → brief with specialist step traces |
+| **G2 Specialists** | Telemetry + Knowledge + Compliance specialists (own tools, clean context) | Each returns distilled evidence, not raw dumps |
+| **G3 GraphRAG** | Cognee ON + Neo4j query templates as Knowledge tools | Multi-hop cite: doc → equipment → zone → clause |
+| **G4 Validator** | Deterministic gate: no invented twin tags; citations required for “recommended” barriers | Invented-tag rate **0** on gold set |
+| **G5 Multimodal tools** | Melia English transcript + vision events as investigator tools | Brief can mention radio + camera lineage |
+| **G6 Evals** | `eval/agents/` gold briefs (groundedness, citation precision) | Harness command in CI or nightly |
+
+**Exit criteria**
+- [ ] Orchestrator + ≥3 specialists live behind `POST /api/findings/{id}/investigate`  
+- [ ] Cognee cognify path green on ingest  
+- [ ] Validator blocks uncited / invented-tag recommendations  
+- [ ] Agent eval suite exists with ≥10 gold briefs  
+- [ ] `verge_risk` still cannot import `verge_llm` (CI lint)
+
+---
+
+## 8. Phase 3 — Specialist Agents Depth (~2 weeks)
+
+**Goal:** RCA, compliance, and lessons are **specialists under the same orchestrator**, not isolated chat panels.
+
+### 3A Maintenance & RCA specialist
 | Piece | Detail |
 |---|---|
 | Service | `services/maintenance/` |
 | Data | WO CSV/API, failure codes, OEM manuals (via docintel), Timescale windows |
-| Agent | Tools: `list_work_orders`, `sensor_window`, `manual_search`, `similar_failures` |
+| Agent | Specialist tools: `list_work_orders`, `sensor_window`, `manual_search`, `similar_failures` |
 | UI | `/maintenance` — asset page: history, recommendations, evidence |
-| DoD | RCA brief with ≥3 citations on gold asset; schedule suggestion explains “why” |
+| DoD | RCA brief with ≥3 citations on gold asset; schedule suggestion explains “why”; passes G4 validator |
 
-### 3B Compliance & QMS intelligence
+### 3B Compliance specialist & QMS
 | Piece | Detail |
 |---|---|
 | Packs | Versioned clause JSON: OISD subset + Factory Act + PESO + env (start curated, honest) |
 | Mapping | Clause → required evidence types → observed docs/inspections/rules |
+| Agent | Compliance Specialist called by orchestrator + gap board UI |
 | UI | Gap board with disclaimer levels: platform / configured / observed / attested / not-evidenced |
 | Eval | Gold gap set precision/recall |
 | DoD | No “81% compliant” without evidence drill-down |
 
-### 3C Lessons Learned engine
+### 3C Lessons Learned specialist
 | Piece | Detail |
 |---|---|
 | Service | `services/lessons/` |
 | Mine | Closed findings, near-miss voice, NCR docs, incident PDFs |
 | Match | Embeddings + rule features vs live RiskContext |
-| Push | Proactive card on Mission Control (`LESSON` severity) |
+| Push | Proactive card on Mission Control (`LESSON` severity) via orchestrator or rule+embed match |
 | DoD | At least one proactive lesson fires in summit rehearsal script |
 
 ### Phase 3 exit criteria
 - [ ] RCA + compliance + lessons each have a 60-second demo beat  
 - [ ] All agent outputs cited or degraded — never invented work orders  
+- [ ] All three register as specialists on the Phase 2.5 orchestrator  
 
 ---
 
@@ -404,21 +432,22 @@ Motion: stream tick, map fly-to, IMMINENT annunciator, citation pulse — then s
 packages/
   ontology/          # NEW — entity/relation schemas
   memory/            # expand — multi-corpus, citations
-  agents/            # expand — RCA, lessons tools
+  agents/            # Phase 2.5 — orchestrator + specialists + validator
 services/
   docintel/          # NEW — Docling pipeline
   maintenance/       # NEW — RCA / WO intelligence
   lessons/           # NEW — pattern push
   knowledge/         # optional façade API or under api/routes
-  risk-engine/       # expand predicates
+  risk-engine/       # expand predicates (LLM-free forever)
   vision/            # RTSP workers
-  voice/             # radio chunk path
+  voice/             # Melia radio → English ops
 apps/console/src/pages/
   KnowledgeView.tsx  # NEW
   MaintenanceView.tsx# NEW
   (Graph embedded or /graph)
 eval/
-  knowledge/         # NEW harness
+  knowledge/         # harness
+  agents/            # Phase 2.5 — gold briefs / groundedness
 plants/packs/        # NEW pack roots
 ```
 
@@ -428,13 +457,13 @@ plants/packs/        # NEW pack roots
 
 | Role | Phase focus |
 |---|---|
-| **Safety/core** | Phase 0, 2A, eval safety |
-| **Knowledge** | Phase 1, 3B, eval knowledge |
-| **Media (vision+voice)** | Phase 2B/2C |
+| **Safety/core** | Phase 0, 2A, eval safety — never GenAI in trip path |
+| **Knowledge / GenAI** | Phase 1, **2.5**, 3B — Cognee GraphRAG, orchestrator, agent evals |
+| **Media (vision+voice)** | Phase 2B/2C — Melia + vision as agent tools |
 | **Console craft** | Phase 0A, 4B, fusion UI |
 | **Infra/GPU** | Vultr, compose, Docling workers |
 
-Even solo: sequence Phase 0 → 1 → 2D fusion → 4 → 5; defer 3A depth if timebox slips (keep thin RCA).
+Even solo: sequence Phase 0 → 1 → 2D fusion → **2.5 GenAI Core** → 4 → 5; thin Phase 3 specialists if timebox slips.
 
 ---
 
@@ -468,6 +497,14 @@ Even solo: sequence Phase 0 → 1 → 2D fusion → 4 → 5; defer 3A depth if t
 ---
 
 ## 16. Build progress log
+
+### 2026-07-18 — GenAI architecture audit + Melia voice
+
+- Research audit: [`GENAI_ARCHITECTURE_AUDIT.md`](./GENAI_ARCHITECTURE_AUDIT.md)  
+- Plan change: insert **Phase 2.5 GenAI Core** (orchestrator, GraphRAG, validators, agent evals)  
+- Voice: Speechmatics Melia multilingual + English ops translation via aimlapi  
+- UI: Ash on console Instrument Paper craft (frontend-only)  
+- Reminder: Vultr Cloud GPU gated by $50 real deposit; CPU VX1 optional for bus host  
 
 ### 2026-07-17 — Phase 0 complete + Phase 1 MVP landed
 
