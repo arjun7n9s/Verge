@@ -11,6 +11,14 @@ from .core import (
     Worker,
     Zone,
 )
+from .documents import (
+    DocumentAsset,
+    DocumentChunk,
+    DocumentKind,
+    DocumentStatus,
+    EntityKind,
+    EntityMention,
+)
 from .enums import (
     BAND_BOUNDS_MIN,
     DataQuality,
@@ -19,14 +27,6 @@ from .enums import (
     FindingState,
     LeadTimeBand,
     SuppressionStatus,
-)
-from .documents import (
-    DocumentAsset,
-    DocumentChunk,
-    DocumentKind,
-    DocumentStatus,
-    EntityKind,
-    EntityMention,
 )
 from .findings import (
     ContributingSignal,
