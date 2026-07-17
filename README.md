@@ -1,8 +1,8 @@
 # Verge
 
-**The lead-time intelligence layer for zero-harm industrial operations.**
+**Industrial intelligence — live risk + living knowledge for zero-harm operations.**
 
-> *"Verge sees it before the threshold."*
+> *"Verge sees it before the threshold — and remembers what the plant already knows."*
 
 At Visakhapatnam Steel Plant (Jan 2025), eight workers died even though gas
 detectors, permit-to-work controls, and SCADA were all *functioning*. The
@@ -107,7 +107,9 @@ See [`docs/commissioning.md`](docs/commissioning.md) and
 **Plant IT** scrapes `GET /metrics` (Prometheus) and `GET /api/ops/status` — a
 day-2 surface distinct from the operator console (§14.6).
 
-See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.
+See [`docs/Verge.md`](docs/Verge.md) for the full product & architecture spec.  
+See [`docs/PRODUCT_AUDIT_AND_ROADMAP.md`](docs/PRODUCT_AUDIT_AND_ROADMAP.md) for the dual-wedge product audit and summit roadmap.  
+See [`docs/PHASED_BUILD_PLAN.md`](docs/PHASED_BUILD_PLAN.md) for phase-by-phase build detail, OSS/paid stack, and usefulness DoDs.
 
 ## Status
 
