@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-
 from verge_api.main import app
 
 
@@ -28,7 +27,10 @@ def test_ingest_and_ask_grounded() -> None:
     listed = client.get("/api/docs").json()
     assert listed["count"] >= 1
 
-    ask = client.post("/api/knowledge/ask", json={"query": "What to check before hot work in B-04?"})
+    ask = client.post(
+        "/api/knowledge/ask",
+        json={"query": "What to check before hot work in B-04?"},
+    )
     assert ask.status_code == 200
     result = ask.json()
     assert result["citations"]
@@ -36,10 +38,11 @@ def test_ingest_and_ask_grounded() -> None:
 
 
 def test_ask_empty_corpus_is_honest() -> None:
-    # Fresh store on a cloned app state is hard; assert contract on empty ask shape
-    # by clearing docintel.
+    # Assert contract on empty ask shape by clearing docintel.
     client = TestClient(app)
-    app.state.docintel = __import__("verge_docintel", fromlist=["DocIntelStore"]).DocIntelStore()
+    from verge_docintel import DocIntelStore
+
+    app.state.docintel = DocIntelStore()
     r = client.post("/api/knowledge/ask", json={"query": "anything about pumps?"})
     assert r.status_code == 200
     body = r.json()

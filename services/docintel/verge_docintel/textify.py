@@ -20,10 +20,10 @@ def textify_bytes(data: bytes, *, filename: str = "", mime: str = "") -> Textify
 
     # Prefer Docling when available (OSS document parse).
     try:
-        from docling.document_converter import DocumentConverter  # type: ignore
-
         import tempfile
         from pathlib import Path
+
+        from docling.document_converter import DocumentConverter  # type: ignore
 
         suffix = Path(name).suffix if name else ".bin"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
@@ -54,8 +54,9 @@ def textify_bytes(data: bytes, *, filename: str = "", mime: str = "") -> Textify
 
     if name.endswith(".pdf") or mime == "application/pdf":
         try:
-            from pypdf import PdfReader  # type: ignore
             import io
+
+            from pypdf import PdfReader  # type: ignore
 
             reader = PdfReader(io.BytesIO(data))
             parts = []
@@ -81,7 +82,13 @@ def textify_bytes(data: bytes, *, filename: str = "", mime: str = "") -> Textify
     # Last resort: try utf-8
     try:
         text = data.decode("utf-8")
-        return TextifyResult(text=text, page_count=1, backend="utf8", degraded=True, reason="unknown-mime")
+        return TextifyResult(
+            text=text,
+            page_count=1,
+            backend="utf8",
+            degraded=True,
+            reason="unknown-mime",
+        )
     except UnicodeDecodeError:
         return TextifyResult(
             text="",

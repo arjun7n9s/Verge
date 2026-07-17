@@ -9,6 +9,9 @@ from verge_docintel.pipeline import chunk_text
 from verge_llm import Message, provider_from_env
 
 router = APIRouter(tags=["knowledge"])
+DOC_FILE = File(...)
+TITLE_FORM = Form(None)
+PLANT_PACK_FORM = Form(None)
 
 
 def _store(request: Request) -> DocIntelStore:
@@ -32,21 +35,23 @@ def get_doc(document_id: str, request: Request) -> dict:
     doc = store.get(document_id)
     if doc is None:
         raise HTTPException(404, "document not found")
+    chunks = [c.model_dump(by_alias=True, mode="json") for c in store.chunks.get(document_id, [])]
+    entities = [
+        e.model_dump(by_alias=True, mode="json") for e in store.entities.get(document_id, [])
+    ]
     return {
         "document": doc.model_dump(by_alias=True, mode="json"),
-        "chunks": [c.model_dump(by_alias=True, mode="json") for c in store.chunks.get(document_id, [])],
-        "entities": [
-            e.model_dump(by_alias=True, mode="json") for e in store.entities.get(document_id, [])
-        ],
+        "chunks": chunks,
+        "entities": entities,
     }
 
 
 @router.post("/docs/ingest")
 async def ingest_doc(
     request: Request,
-    file: UploadFile = File(...),
-    title: str | None = Form(None),
-    plantPack: str | None = Form(None),
+    file: UploadFile = DOC_FILE,
+    title: str | None = TITLE_FORM,
+    plantPack: str | None = PLANT_PACK_FORM,
 ) -> dict:
     store = _store(request)
     data = await file.read()

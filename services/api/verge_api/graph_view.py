@@ -30,6 +30,16 @@ def _pos(key: str, lane: int) -> tuple[float, float]:
     return float(x), float(y)
 
 
+def _attr(obj: Any, snake: str, camel: str, default: Any = None) -> Any:
+    if isinstance(obj, dict):
+        return obj.get(camel, obj.get(snake, default))
+    return getattr(obj, snake, default)
+
+
+def _link(links: list[dict], source: str, target: str, kind: str) -> None:
+    links.append({"source": source, "target": target, "kind": kind})
+
+
 def build_plant_graph(
     plant: PlantModel,
     permits: list[Any],
@@ -43,7 +53,7 @@ def build_plant_graph(
     # bounded sample so an empty plant still shows the twin, not fiction.
     eq_ids: set[str] = set()
     for p in permits:
-        eid = getattr(p, "equipment_id", None) or (p.get("equipmentId") if isinstance(p, dict) else None)
+        eid = _attr(p, "equipment_id", "equipmentId")
         if eid:
             eq_ids.add(str(eid))
     for f in findings:
@@ -80,10 +90,10 @@ def build_plant_graph(
         )
 
     for p in permits:
-        pid = getattr(p, "permit_id", None) or (p.get("permitId") if isinstance(p, dict) else None)
-        kind = getattr(p, "kind", None) or (p.get("kind") if isinstance(p, dict) else "permit")
-        zone = getattr(p, "zone_id", None) or (p.get("zoneId") if isinstance(p, dict) else "")
-        eid = getattr(p, "equipment_id", None) or (p.get("equipmentId") if isinstance(p, dict) else None)
+        pid = _attr(p, "permit_id", "permitId")
+        kind = _attr(p, "kind", "kind", "permit")
+        zone = _attr(p, "zone_id", "zoneId", "")
+        eid = _attr(p, "equipment_id", "equipmentId")
         if not pid:
             continue
         nid = f"ptw:{pid}"
@@ -104,12 +114,12 @@ def build_plant_graph(
             }
         )
         if eid and f"eq:{eid}" in seen:
-            links.append({"source": nid, "target": f"eq:{eid}", "kind": "permits"})
+            _link(links, nid, f"eq:{eid}", "permits")
         else:
-            # Link permit to any equipment in the same zone.
             for eq in equipment:
-                if eq.zone_id == zone and f"eq:{eq.equipment_id}" in seen:
-                    links.append({"source": nid, "target": f"eq:{eq.equipment_id}", "kind": "permits"})
+                eq_nid = f"eq:{eq.equipment_id}"
+                if eq.zone_id == zone and eq_nid in seen:
+                    _link(links, nid, eq_nid, "permits")
                     break
 
     for f in findings:
@@ -138,19 +148,19 @@ def build_plant_graph(
                 "refId": f.finding_id,
             }
         )
-        # Link risk → permits / equipment mentioned in lineage.
         for item in f.lineage or []:
             if item.startswith("permit:"):
                 target = f"ptw:{item.split(':', 1)[1]}"
                 if target in seen:
-                    links.append({"source": nid, "target": target, "kind": "implicates"})
+                    _link(links, nid, target, "implicates")
             if item.startswith("equipment:"):
                 target = f"eq:{item.split(':', 1)[1]}"
                 if target in seen:
-                    links.append({"source": nid, "target": target, "kind": "implicates"})
+                    _link(links, nid, target, "implicates")
         for eq in equipment:
-            if eq.zone_id == f.zone_id and f"eq:{eq.equipment_id}" in seen:
-                links.append({"source": nid, "target": f"eq:{eq.equipment_id}", "kind": "in-zone"})
+            eq_nid = f"eq:{eq.equipment_id}"
+            if eq.zone_id == f.zone_id and eq_nid in seen:
+                _link(links, nid, eq_nid, "in-zone")
                 break
 
     return {

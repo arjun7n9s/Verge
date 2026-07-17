@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, StreamingResponse
 from pydantic import BaseModel
 from verge_compliance import ActionsLog
+from verge_docintel import DocIntelStore
 from verge_llm import provider_from_env
 from verge_mlops import DEMO_REGISTRY, ModelRegistry
 from verge_mlops.canary import parse_canary_zones
@@ -34,6 +35,7 @@ from verge_twin.plant import DEMO_PLANT
 from verge_vision import provider_from_env as vision_provider_from_env
 
 from .auth import AuthMiddleware
+from .demo_seed import seed_enabled, seed_mode
 from .emergency import EmergencyManager
 from .evidence_store import upload_evidence_manifest
 from .factory import make_store
@@ -67,9 +69,6 @@ from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
 from .routes.workers import router as workers_router
-from verge_docintel import DocIntelStore
-
-from .demo_seed import seed_enabled, seed_mode
 from .seed import seed
 from .state_factory import make_permits_registry, make_reading_buffer
 from .stream_bus import StreamBus
