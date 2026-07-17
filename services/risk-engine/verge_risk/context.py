@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from verge_schema.core import Permit, Reading, Sensor
+from verge_schema.core import MaintenanceOrder, Permit, Reading, Sensor
+from verge_schema.events import VisionDetection, VoiceEvent
 
 
 @dataclass
@@ -19,6 +20,10 @@ class RiskContext:
     permits: list[Permit] = field(default_factory=list)  # active permits
     thresholds: dict[str, float] = field(default_factory=dict)  # sensor_kind -> alarm
     in_changeover: bool = False
+    voice_events: list[VoiceEvent] = field(default_factory=list)
+    vision_detections: list[VisionDetection] = field(default_factory=list)
+    maintenance_orders: list[MaintenanceOrder] = field(default_factory=list)
+    worker_zones: dict[str, str] = field(default_factory=dict)  # worker_id -> zone_id
 
     def zone(self, zone_id: str) -> ZoneView:
         return ZoneView(self, zone_id)

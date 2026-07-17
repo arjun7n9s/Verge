@@ -205,6 +205,7 @@ if seed_enabled():
     app.state.readings.seed_from_replay()
 app.state.sensor_thresholds = _demo_plant.thresholds_by_kind()
 app.state.docintel = DocIntelStore()
+app.state.voice_events = []  # rolling VoiceEvent list for risk fusion
 
 
 class TransitionBody(BaseModel):

@@ -5,14 +5,28 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from verge_voice import alert_preview, near_miss_from_audio, transcribe_audio
+from pydantic import BaseModel, Field
+from verge_voice import (
+    alert_preview,
+    near_miss_from_audio,
+    near_miss_from_transcript,
+    transcribe_audio,
+)
 
 from ..hooks import maybe_ingest_near_miss
+from ..voice_events import list_voice_events, record_voice_event
 
 router = APIRouter(tags=["voice"])
 VOICE_FILE = File(...)
 ACTOR_FORM = Form("operator")
 FINDING_FORM = Form(None)
+
+
+class VoiceEventBody(BaseModel):
+    transcript: str = Field(min_length=2)
+    zoneId: str | None = None
+    source: str = "radio"
+    hazards: list[str] = Field(default_factory=list)
 
 
 @router.post("/voice/transcribe")
@@ -114,8 +128,46 @@ async def voice_near_miss(
         structured=body.get("structured") or {},
         finding_id=findingId,
     )
+    ev = record_voice_event(
+        request.app.state,
+        transcript=body.get("transcript", ""),
+        structured=body.get("structured") or {},
+        source="near-miss",
+    )
     body["auditAppended"] = True
+    body["voiceEventId"] = ev.event_id
     return body
+
+
+@router.post("/voice/events")
+def voice_event_ingest(body: VoiceEventBody, request: Request) -> dict:
+    """Ingest a structured voice/radio event (text path for drills & demos)."""
+    structured = {"hazards": body.hazards, "zones": [body.zoneId] if body.zoneId else []}
+    if not body.hazards:
+        structured = near_miss_from_transcript(body.transcript).get("structured") or structured
+    ev = record_voice_event(
+        request.app.state,
+        transcript=body.transcript,
+        structured=structured,
+        zone_id=body.zoneId,
+        source=body.source,
+    )
+    request.app.state.store.audit_append(
+        actor="operator",
+        kind="voice-event",
+        payload=ev.model_dump(by_alias=True, mode="json"),
+        timestamp=datetime.now(UTC),
+    )
+    return {"event": ev.model_dump(by_alias=True, mode="json")}
+
+
+@router.get("/voice/events")
+def voice_events_recent(request: Request, limit: int = 50) -> dict:
+    events = list_voice_events(request.app.state, limit=limit)
+    return {
+        "events": [e.model_dump(by_alias=True, mode="json") for e in events],
+        "count": len(events),
+    }
 
 
 @router.post("/findings/{finding_id}/alert/preview")

@@ -8,6 +8,8 @@ from verge_docintel import DocIntelStore, process_bytes
 from verge_docintel.pipeline import chunk_text
 from verge_llm import Message, provider_from_env
 
+from verge_api.doc_hooks import maybe_cognify_document, maybe_sync_entities_neo4j
+
 router = APIRouter(tags=["knowledge"])
 DOC_FILE = File(...)
 TITLE_FORM = Form(None)
@@ -69,6 +71,10 @@ async def ingest_doc(
         "document": asset.model_dump(by_alias=True, mode="json"),
         "entityCount": len(store.entities.get(asset.document_id, [])),
         "chunkCount": len(store.chunks.get(asset.document_id, [])),
+        "hooks": {
+            "cognee": maybe_cognify_document(store, asset),
+            "neo4j": maybe_sync_entities_neo4j(store, asset),
+        },
     }
 
 

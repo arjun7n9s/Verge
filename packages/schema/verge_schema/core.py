@@ -61,6 +61,7 @@ class MaintenanceOrder(VergeModel):
     equipment_id: str
     state: str  # e.g. scheduled, in-progress, degraded
     opened_at: datetime
+    zone_id: str | None = None
 
 
 class Worker(VergeModel):

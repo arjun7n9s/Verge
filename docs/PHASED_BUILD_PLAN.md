@@ -484,6 +484,17 @@ Even solo: sequence Phase 0 → 1 → 2D fusion → 4 → 5; defer 3A depth if t
 - API: `POST /api/docs/ingest`, `GET /api/docs`, `POST /api/knowledge/ask`
 - Console `/knowledge` Living Knowledge surface
 
-**Phase 1 remaining (next commits):** Docling on Vultr, Neo4j entity upsert, Cognee cognify on ingest, entity F1 eval harness, PDF page preview.
+**Phase 1 remaining:** Docling on Vultr GPU for scans, raise entity F1 toward 0.85, PDF page preview, enable `VERGE_COGNEE_ENABLED=true` for live cognify.
 
-**Stack quality check this phase:** keep Docling OSS optional extras; Cognee+aimlapi already wired for ask synthesis; add `pypdf` when PDF corpus arrives.
+**Phase 1 depth — DONE (this session)**
+- Post-ingest hooks: Cognee cognify + Neo4j entity upsert (`doc_hooks.py`; degrade when off)
+- `eval/knowledge/` entity F1 gold + citation groundedness metrics
+- Live E2E: ingest SOP → ask hot work/B-04 → cited aimlapi answer (`degraded:false`)
+
+**Phase 2 start — DONE (this session)**
+- Predicates: `sensor_near_threshold`, `maintenance_open`, `worker_in_zone`, `voice_hazard_mention`, `vision_detection`
+- Schema: `VoiceEvent`, `VisionDetection`; stream runner ingests voice/vision/maintenance/worker events
+- Starter rules for radio gas smell, vision PPE, vibration+MO, worker+LEL
+- API: `POST/GET /api/voice/events` + near-miss → voice-event buffer
+
+**Stack quality check this phase:** keep Docling OSS optional extras; Cognee+aimlapi already wired for ask synthesis; add `pypdf` when PDF corpus arrives. CI green on `dad42e5`+follow-ups.

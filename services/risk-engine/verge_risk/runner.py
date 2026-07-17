@@ -19,16 +19,23 @@ from collections import deque
 from collections.abc import Callable, Iterable
 from datetime import datetime
 
-from verge_schema.core import Permit, Reading, Sensor
+from verge_schema.core import MaintenanceOrder, Permit, Reading, Sensor
+from verge_schema.events import VisionDetection, VoiceEvent
 from verge_schema.findings import RiskFinding
 
 from .context import RiskContext
 from .dedupe_store import DedupeStore
 from .rules import Rule
 
-DEFAULT_THRESHOLDS = {"gas-lel": 100.0, "gas-co": 50.0}
+DEFAULT_THRESHOLDS = {
+    "gas-lel": 100.0,
+    "gas-co": 50.0,
+    "vibration": 10.0,
+}
 WINDOW = 12  # readings per sensor (~6 min at 30s cadence)
 MAX_PERMITS = 500
+MAX_VOICE = 200
+MAX_VISION = 200
 
 
 def _dt(s: str) -> datetime:
@@ -46,6 +53,10 @@ class StreamState:
         self.permits: list[Permit] = []
         self.changeovers: list[tuple[datetime, datetime, str]] = []
         self._pending: dict[str, datetime] = {}
+        self.voice_events: list[VoiceEvent] = []
+        self.vision_detections: list[VisionDetection] = []
+        self.maintenance_orders: list[MaintenanceOrder] = []
+        self.worker_zones: dict[str, str] = {}
         self.now: datetime | None = None
 
     def _prune_permits(self) -> None:
@@ -82,6 +93,44 @@ class StreamState:
                 self._pending[e["zoneId"]] = ts
             elif e["event"] == "changeover-end" and e["zoneId"] in self._pending:
                 self.changeovers.append((self._pending.pop(e["zoneId"]), ts, e["zoneId"]))
+        elif kind == "voice-event":
+            self.voice_events.append(
+                VoiceEvent(
+                    event_id=e.get("eventId") or f"VE-{ts:%Y%m%dT%H%M%S}",
+                    ts=ts,
+                    transcript=e.get("transcript", ""),
+                    zone_id=e.get("zoneId"),
+                    hazards=list(e.get("hazards") or []),
+                    equipment_ids=list(e.get("equipmentIds") or []),
+                    source=e.get("source", "radio"),
+                )
+            )
+            self.voice_events = self.voice_events[-MAX_VOICE:]
+        elif kind == "vision-detection":
+            self.vision_detections.append(
+                VisionDetection(
+                    detection_id=e.get("detectionId") or f"VD-{ts:%Y%m%dT%H%M%S}",
+                    ts=ts,
+                    camera_id=e.get("cameraId", "cam"),
+                    zone_id=e["zoneId"],
+                    label=e.get("label", "unknown"),
+                    confidence=float(e.get("confidence", 0.5)),
+                    frame_uri=e.get("frameUri"),
+                )
+            )
+            self.vision_detections = self.vision_detections[-MAX_VISION:]
+        elif kind == "maintenance":
+            self.maintenance_orders.append(
+                MaintenanceOrder(
+                    order_id=e["orderId"],
+                    equipment_id=e["equipmentId"],
+                    state=e.get("state", "in-progress"),
+                    opened_at=ts,
+                    zone_id=e.get("zoneId"),
+                )
+            )
+        elif kind == "worker-location":
+            self.worker_zones[e["workerId"]] = e["zoneId"]
         return kind
 
     def in_changeover(self) -> bool:
@@ -94,6 +143,10 @@ class StreamState:
             now=self.now, sensors=self.sensors, readings=windowed,
             permits=self.permits, thresholds=self.thresholds,
             in_changeover=self.in_changeover(),
+            voice_events=list(self.voice_events),
+            vision_detections=list(self.vision_detections),
+            maintenance_orders=list(self.maintenance_orders),
+            worker_zones=dict(self.worker_zones),
         )
 
 

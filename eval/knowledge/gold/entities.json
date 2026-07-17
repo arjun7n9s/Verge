@@ -1,0 +1,32 @@
+{
+  "docs": [
+    {
+      "id": "gold-hot-work",
+      "text": "Isolate PUMP-3 in zone B-04 before hot work. See OISD-STD-105 and PW-2025-0142.",
+      "entities": [
+        {"kind": "equipment", "normalized": "PUMP-3"},
+        {"kind": "zone", "normalized": "B-04"},
+        {"kind": "clause", "normalized": "OISD-STD-105"},
+        {"kind": "permit", "normalized": "PW-2025-0142"}
+      ]
+    },
+    {
+      "id": "gold-confined",
+      "text": "Confined space entry in B-05 requires gas-CO watch and permit PW-0091 per OISD-STD-105.",
+      "entities": [
+        {"kind": "zone", "normalized": "B-05"},
+        {"kind": "permit", "normalized": "PW-0091"},
+        {"kind": "clause", "normalized": "OISD-STD-105"}
+      ]
+    },
+    {
+      "id": "gold-lel",
+      "text": "Confirm LEL-04 trending in B-04 before welding near P-3.",
+      "entities": [
+        {"kind": "equipment", "normalized": "LEL-04"},
+        {"kind": "zone", "normalized": "B-04"},
+        {"kind": "equipment", "normalized": "P-3"}
+      ]
+    }
+  ]
+}

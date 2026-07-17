@@ -28,6 +28,7 @@ from .enums import (
     LeadTimeBand,
     SuppressionStatus,
 )
+from .events import VisionDetection, VoiceEvent
 from .findings import (
     ContributingSignal,
     FindingEvent,
@@ -65,6 +66,8 @@ __all__ = [
     "Shift",
     "SuppressionStatus",
     "SuppressionSuggestion",
+    "VisionDetection",
+    "VoiceEvent",
     "Worker",
     "Zone",
 ]

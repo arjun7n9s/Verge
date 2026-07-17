@@ -427,3 +427,54 @@
       pct: 0.25
   forecast:
     sensor_kind: gas-lel
+
+# ── Phase 2 fusion predicates (voice / vision / maintenance / generalised sensor) ──
+
+- id: hot-work-voice-gas-smell
+  name: Hot work with radio-reported gas smell
+  severity: critical
+  base_confidence: 0.84
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: voice_hazard_mention
+      hazards: [gas, lel, smell, flammable]
+      max_age_s: 900
+
+- id: hot-work-vision-no-ppe
+  name: Hot work with vision PPE gap
+  severity: warning
+  base_confidence: 0.72
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: vision_detection
+      labels: [no-hardhat, no-ppe, person]
+      min_confidence: 0.45
+      max_age_s: 300
+
+- id: maintenance-open-elevated-vibration
+  name: Open maintenance with elevated vibration
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: maintenance_open
+      states: [in-progress, degraded, open]
+    - type: sensor_near_threshold
+      sensor_kind: vibration
+      pct: 0.20
+      min_rise_per_min: 0.0
+  forecast:
+    sensor_kind: vibration
+
+- id: worker-in-zone-rising-lel
+  name: Worker present with rising flammable gas
+  severity: critical
+  base_confidence: 0.86
+  all:
+    - type: worker_in_zone
+    - type: sensor_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-lel

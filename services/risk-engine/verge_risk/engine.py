@@ -53,8 +53,12 @@ def _p_shift_changeover(zv: ZoneView, params: dict) -> ContributingSignal | None
     return ContributingSignal(kind="shift", ref_id="changeover", summary="shift changeover window")
 
 
-def _p_gas_near_threshold(zv: ZoneView, params: dict) -> ContributingSignal | None:
-    """Match if a gas sensor is within `pct` below its alarm threshold OR rising."""
+def _p_sensor_near_threshold(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    """Match if a sensor is within `pct` below its alarm threshold OR rising.
+
+    Generalises the legacy ``gas_near_threshold`` predicate to any sensor kind
+    (LEL, CO, H2S, vibration, pressure, …).
+    """
     kind = params["sensor_kind"]
     pct = float(params.get("pct", 0.10))
     min_rise = float(params.get("min_rise_per_min", 0.0))
@@ -77,15 +81,119 @@ def _p_gas_near_threshold(zv: ZoneView, params: dict) -> ContributingSignal | No
     return None
 
 
+def _p_gas_near_threshold(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    """Back-compat alias for ``sensor_near_threshold``."""
+    return _p_sensor_near_threshold(zv, params)
+
+
+def _p_maintenance_open(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    want = set(params.get("states") or ["in-progress", "degraded", "open"])
+    eq_filter = params.get("equipment_id")
+    for mo in zv.ctx.maintenance_orders:
+        if mo.state not in want:
+            continue
+        if eq_filter and mo.equipment_id != eq_filter:
+            continue
+        in_zone = mo.zone_id == zv.zone_id or any(
+            s.equipment_id == mo.equipment_id and s.zone_id == zv.zone_id
+            for s in zv.ctx.sensors.values()
+        )
+        if not in_zone:
+            continue
+        return ContributingSignal(
+            kind="maintenance",
+            ref_id=mo.order_id,
+            summary=f"open MO {mo.order_id} ({mo.state}) on {mo.equipment_id}",
+            ts=mo.opened_at,
+        )
+    return None
+
+
+def _p_worker_in_zone(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    role = (params.get("role") or "").lower()
+    for worker_id, zone_id in zv.ctx.worker_zones.items():
+        if zone_id != zv.zone_id:
+            continue
+        if role and role not in worker_id.lower():
+            continue
+        return ContributingSignal(
+            kind="worker",
+            ref_id=worker_id,
+            summary=f"worker {worker_id} in zone {zone_id}",
+        )
+    return None
+
+
+def _p_voice_hazard_mention(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    needles = [h.lower() for h in params.get("hazards", [])] or None
+    max_age_s = float(params.get("max_age_s", 900))
+    for ev in zv.ctx.voice_events:
+        if ev.zone_id and ev.zone_id != zv.zone_id:
+            continue
+        if not ev.zone_id and zv.zone_id not in (ev.transcript or ""):
+            # unzoned events only match if transcript mentions the zone id
+            continue
+        age = (zv.ctx.now - ev.ts).total_seconds()
+        if age < 0 or age > max_age_s:
+            continue
+        hazards = [h.lower() for h in ev.hazards]
+        blob = f"{ev.transcript} {' '.join(hazards)}".lower()
+        if needles and not any(n in blob for n in needles):
+            continue
+        if not hazards and not needles:
+            continue
+        return ContributingSignal(
+            kind="voice",
+            ref_id=ev.event_id,
+            summary=f"radio/voice hazard: {', '.join(ev.hazards) or ev.transcript[:80]}",
+            ts=ev.ts,
+        )
+    return None
+
+
+def _p_vision_detection(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    labels = {x.lower() for x in params.get("labels", [])}
+    min_conf = float(params.get("min_confidence", 0.4))
+    max_age_s = float(params.get("max_age_s", 300))
+    for det in zv.ctx.vision_detections:
+        if det.zone_id != zv.zone_id:
+            continue
+        if det.confidence < min_conf:
+            continue
+        age = (zv.ctx.now - det.ts).total_seconds()
+        if age < 0 or age > max_age_s:
+            continue
+        if labels and det.label.lower() not in labels:
+            continue
+        return ContributingSignal(
+            kind="vision",
+            ref_id=det.detection_id,
+            summary=f"vision {det.label} @ {det.camera_id} ({det.confidence:.2f})",
+            ts=det.ts,
+        )
+    return None
+
+
 PREDICATES = {
     "permit_active": _p_permit_active,
     "shift_changeover": _p_shift_changeover,
     "gas_near_threshold": _p_gas_near_threshold,
+    "sensor_near_threshold": _p_sensor_near_threshold,
+    "maintenance_open": _p_maintenance_open,
+    "worker_in_zone": _p_worker_in_zone,
+    "voice_hazard_mention": _p_voice_hazard_mention,
+    "vision_detection": _p_vision_detection,
 }
 
 
 def _zone_ids(ctx: RiskContext) -> list[str]:
-    return sorted({s.zone_id for s in ctx.sensors.values()})
+    zones = {s.zone_id for s in ctx.sensors.values()}
+    zones.update(p.zone_id for p in ctx.permits)
+    zones.update(v.zone_id for v in ctx.voice_events if v.zone_id)
+    zones.update(d.zone_id for d in ctx.vision_detections)
+    zones.update(z for z in ctx.worker_zones.values())
+    zones.update(m.zone_id for m in ctx.maintenance_orders if m.zone_id)
+    return sorted(zones)
 
 
 def _graph_incomplete(zone_id: str) -> bool:

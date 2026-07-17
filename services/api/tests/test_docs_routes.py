@@ -23,6 +23,9 @@ def test_ingest_and_ask_grounded() -> None:
     assert body["document"]["status"] == "ready"
     assert body["entityCount"] >= 1
     assert body["chunkCount"] >= 1
+    assert "hooks" in body
+    assert "cognee" in body["hooks"]
+    assert "neo4j" in body["hooks"]
 
     listed = client.get("/api/docs").json()
     assert listed["count"] >= 1
