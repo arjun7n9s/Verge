@@ -19,6 +19,7 @@ dependencies = [
     "verge-twin",
     "verge-compliance",
     "verge-vision",
+    "verge-docintel",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "sqlalchemy>=2.0",
@@ -54,3 +55,4 @@ verge-permit = { workspace = true }
 verge-twin = { workspace = true }
 verge-compliance = { workspace = true }
 verge-vision = { workspace = true }
+verge-docintel = { workspace = true }

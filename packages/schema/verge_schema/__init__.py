@@ -20,6 +20,14 @@ from .enums import (
     LeadTimeBand,
     SuppressionStatus,
 )
+from .documents import (
+    DocumentAsset,
+    DocumentChunk,
+    DocumentKind,
+    DocumentStatus,
+    EntityKind,
+    EntityMention,
+)
 from .findings import (
     ContributingSignal,
     FindingEvent,
@@ -35,6 +43,12 @@ __all__ = [
     "AuditEntry",
     "ContributingSignal",
     "DataQuality",
+    "DocumentAsset",
+    "DocumentChunk",
+    "DocumentKind",
+    "DocumentStatus",
+    "EntityKind",
+    "EntityMention",
     "Equipment",
     "EstimateQuality",
     "EvidencePack",

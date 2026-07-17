@@ -26,6 +26,7 @@ dependencies = [
   "verge-sims",
   "verge-cli",
   "verge-api",
+  "verge-docintel",
 ]
 
 [project.optional-dependencies]
@@ -61,6 +62,7 @@ members = [
   "services/compliance",
   "services/vision",
   "services/connectors",
+  "services/docintel",
   "sims",
   "cli",
 ]
@@ -87,6 +89,7 @@ verge-connectors = { workspace = true }
 verge-sims = { workspace = true }
 verge-cli = { workspace = true }
 verge-api = { workspace = true }
+verge-docintel = { workspace = true }
 
 [tool.ruff]
 line-length = 100
