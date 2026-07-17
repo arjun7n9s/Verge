@@ -54,6 +54,7 @@ from .routes.eval_report import router as eval_report_router
 from .routes.evidence import router as evidence_router
 from .routes.fatigue import router as fatigue_router
 from .routes.fleet import router as fleet_router
+from .routes.fusion import router as fusion_router
 from .routes.investigate import router as investigate_router
 from .routes.memory import router as memory_router
 from .routes.models import router as models_router
@@ -165,6 +166,7 @@ app.include_router(actions_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(fusion_router, prefix="/api")
 app.include_router(models_router, prefix="/api")
 app.include_router(ops_router, prefix="/api")
 app.include_router(degradation_router, prefix="/api")
