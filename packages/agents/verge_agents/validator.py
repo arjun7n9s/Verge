@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any
 
 from .twin_catalog import TwinCatalog
 
@@ -112,9 +111,7 @@ def _barrier_has_evidence(barrier: dict, evidence_tools: set[str], known_refs: s
     ).lower()
     if any(t.lower() in hay for t in evidence_tools):
         return True
-    if any(ref.lower() in hay for ref in known_refs if len(ref) >= 3):
-        return True
-    return False
+    return bool(any(ref.lower() in hay for ref in known_refs if len(ref) >= 3))
 
 
 def validate_brief(

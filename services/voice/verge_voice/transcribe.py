@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -107,10 +108,8 @@ def speechmatics_status(env: dict[str, str] | None = None) -> dict[str, Any]:
     reason = settings.missing_reason()
     region = "eu1"
     if "asr.api.speechmatics.com" in settings.base_url:
-        try:
+        with contextlib.suppress(Exception):
             region = settings.base_url.split("//", 1)[1].split(".", 1)[0]
-        except Exception:  # noqa: BLE001
-            pass
     return {
         "configured": reason is None,
         "degraded": reason is not None,

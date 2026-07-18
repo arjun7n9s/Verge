@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from verge_agents import TwinCatalog, validate_brief
+
 from eval.agents.metrics import (
     citation_precision,
     groundedness_proxy,
     invented_tag_rate,
 )
-from verge_agents import TwinCatalog, validate_brief
 
 GOLD = Path(__file__).resolve().parents[1] / "gold" / "briefs.json"
 

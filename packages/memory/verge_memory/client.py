@@ -77,7 +77,10 @@ class CogneeSettings:
 
     def missing_reason(self) -> str | None:
         if not self.enabled:
-            return "cognee disabled (set COGNEE_API_KEY+COGNEE_BASE_URL or VERGE_COGNEE_ENABLED=true)"
+            return (
+                "cognee disabled (set COGNEE_API_KEY+COGNEE_BASE_URL "
+                "or VERGE_COGNEE_ENABLED=true)"
+            )
         if not self.base_url:
             return "missing COGNEE_BASE_URL or COGNEE_SERVICE_URL"
         if not self.api_key:

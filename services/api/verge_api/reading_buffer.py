@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections import defaultdict, deque
 from datetime import UTC, datetime
@@ -48,10 +49,8 @@ class ReadingBuffer:
                     pass
                 elif "+" not in ts_s[10:] and "Z" not in ts_s:
                     # Naive ISO from SQLite — treat as UTC for fusion health.
-                    try:
+                    with contextlib.suppress(ValueError):
                         ts_s = datetime.fromisoformat(ts_s).replace(tzinfo=UTC).isoformat()
-                    except ValueError:
-                        pass
             self._append_point(
                 row["sensor_id"],
                 {

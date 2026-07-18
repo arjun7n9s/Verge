@@ -173,7 +173,8 @@ def operator_banners(
                 "code": "speechmatics-degraded",
                 "severity": "warn",
                 "message": (
-                    f"Radio/voice STT: degraded ({stt.get('reason') or 'Speechmatics unavailable'}). "
+                    "Radio/voice STT: degraded ("
+                    f"{stt.get('reason') or 'Speechmatics unavailable'}). "
                     "Text handover and rule engine remain available."
                 ),
             })
@@ -195,7 +196,8 @@ def operator_banners(
                 "code": "cognee-degraded",
                 "severity": "warn",
                 "message": (
-                    f"Plant memory (Cognee): degraded ({settings.missing_reason() or 'not ready'}). "
+                    "Plant memory (Cognee): degraded ("
+                    f"{settings.missing_reason() or 'not ready'}). "
                     "DocIntel local corpus still answers when available."
                 ),
             })

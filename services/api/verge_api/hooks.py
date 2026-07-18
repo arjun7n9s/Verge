@@ -10,7 +10,6 @@ from verge_memory.ingest import ingest_and_cognify, ingest_closed_finding, inges
 from verge_schema.enums import FindingState as S
 from verge_schema.findings import RiskFinding
 
-
 _CLOSED = {S.RESOLVED, S.CLOSED, S.SUPPRESSED_AS_DUPLICATE}
 
 

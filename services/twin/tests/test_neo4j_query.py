@@ -58,8 +58,8 @@ def test_zone_document_hops_returns_paths_when_driver_mocked(monkeypatch):
             assert uri.startswith("bolt://")
             return FakeDriver()
 
-    import types
     import sys
+    import types
 
     fake_neo4j = types.ModuleType("neo4j")
     fake_neo4j.GraphDatabase = FakeGraphDatabase

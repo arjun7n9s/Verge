@@ -111,7 +111,11 @@ def run_telemetry_specialist(
     }
     refs = []
     if isinstance(permits, list):
-        refs.extend(str(p.get("permitId")) for p in permits if isinstance(p, dict) and p.get("permitId"))
+        refs.extend(
+            str(p.get("permitId"))
+            for p in permits
+            if isinstance(p, dict) and p.get("permitId")
+        )
     return SpecialistResult("telemetry", digest, steps, refs=[r for r in refs if r])
 
 
@@ -168,7 +172,11 @@ def run_compliance_specialist(
     }
     refs = []
     if isinstance(clauses, list):
-        refs = [str(c.get("clauseId")) for c in clauses if isinstance(c, dict) and c.get("clauseId")]
+        refs = [
+            str(c.get("clauseId"))
+            for c in clauses
+            if isinstance(c, dict) and c.get("clauseId")
+        ]
     return SpecialistResult("compliance", digest, steps, refs=refs)
 
 
