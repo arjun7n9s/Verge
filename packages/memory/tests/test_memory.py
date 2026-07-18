@@ -307,4 +307,5 @@ def test_ingest_feedback_posts_document() -> None:
         reason_text="shift handover clarified the reading",
     )
     assert result.ok
-    assert seen == ["/api/v1/add"]
+    # Docs: searchable memory requires create → add → cognify.
+    assert seen == ["/api/v1/datasets/", "/api/v1/add", "/api/v1/cognify"]

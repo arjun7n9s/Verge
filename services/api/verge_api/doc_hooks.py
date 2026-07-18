@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 
 from verge_docintel.pipeline import DocIntelStore
-from verge_memory import ingest_document
 from verge_memory.client import CogneeClient
 from verge_memory.datasets import dataset_name
+from verge_memory.ingest import ingest_and_cognify
 from verge_schema.documents import DocumentAsset, DocumentStatus, EntityKind
 
 
@@ -34,10 +34,14 @@ def maybe_cognify_document(store: DocIntelStore, asset: DocumentAsset) -> dict:
                 "degraded": True,
                 "reason": client.settings.missing_reason() or "cognee-not-ready",
             }
-        result = ingest_document(client, dataset_name(env), asset.title, text)
+        # Docs: add alone is not searchable — cognify builds the graph.
+        result = ingest_and_cognify(
+            client, dataset_name(env), asset.title, text, ensure_dataset=True
+        )
         return {
             "degraded": bool(getattr(result, "degraded", False)),
             "reason": getattr(result, "reason", "") or "",
+            "statusCode": getattr(result, "status_code", None),
         }
     except Exception as exc:
         return {"degraded": True, "reason": f"cognee:{type(exc).__name__}"}

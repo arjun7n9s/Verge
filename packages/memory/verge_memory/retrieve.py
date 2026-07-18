@@ -34,7 +34,15 @@ def _text_from_result(item: Any) -> str:
     if isinstance(item, str):
         return item
     if isinstance(item, dict):
-        for key in ("text", "content", "context", "result", "summary", "text_result"):
+        for key in (
+            "search_result",
+            "text",
+            "content",
+            "context",
+            "result",
+            "summary",
+            "text_result",
+        ):
             value = item.get(key)
             if isinstance(value, str) and value.strip():
                 return value

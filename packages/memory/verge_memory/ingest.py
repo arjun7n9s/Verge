@@ -1,4 +1,9 @@
-"""Ingestion helpers for Cognee-backed memory."""
+"""Ingestion helpers for Cognee-backed memory.
+
+Per Cognee Cloud docs: ``add`` loads raw data; ``cognify`` builds the graph.
+``remember`` does both — we use add+cognify explicitly so plant SOPs land in
+searchable memory (Phase 2.5 Knowledge Specialist).
+"""
 
 from __future__ import annotations
 
@@ -10,8 +15,28 @@ from .client import CogneeClient, CogneeResult
 
 
 def ingest_document(client: CogneeClient, dataset: str, title: str, body: str) -> CogneeResult:
+    """Add a markdown document to a dataset (no cognify)."""
     filename = f"{title.lower().replace(' ', '-')}.md"
     return client.add_text(dataset, f"# {title}\n\n{body.strip()}\n", filename=filename)
+
+
+def ingest_and_cognify(
+    client: CogneeClient,
+    dataset: str,
+    title: str,
+    body: str,
+    *,
+    ensure_dataset: bool = True,
+) -> CogneeResult:
+    """Create dataset (idempotent) → add text → cognify. Used by doc ingest hooks."""
+    if ensure_dataset:
+        created = client.create_dataset(dataset)
+        if not created.ok:
+            return created
+    added = ingest_document(client, dataset, title, body)
+    if not added.ok:
+        return added
+    return client.cognify(dataset)
 
 
 def ingest_closed_finding(client: CogneeClient, dataset: str, finding: RiskFinding) -> CogneeResult:
@@ -29,7 +54,7 @@ def ingest_closed_finding(client: CogneeClient, dataset: str, finding: RiskFindi
         f"Contributing signals:\n{signals or '- none recorded'}\n\n"
         f"Lineage: {', '.join(finding.lineage)}\n"
     )
-    return ingest_document(client, dataset, f"Closed finding {finding.finding_id}", body)
+    return ingest_and_cognify(client, dataset, f"Closed finding {finding.finding_id}", body)
 
 
 def ingest_feedback(
@@ -50,4 +75,6 @@ def ingest_feedback(
         f"Reason text: {reason_text or 'none'}\n"
         f"Lineage: {', '.join(finding.lineage)}\n"
     )
-    return ingest_document(client, dataset, f"Feedback {finding.finding_id} {verdict}", body)
+    return ingest_and_cognify(
+        client, dataset, f"Feedback {finding.finding_id} {verdict}", body
+    )

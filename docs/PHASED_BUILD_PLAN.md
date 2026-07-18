@@ -498,6 +498,13 @@ Even solo: sequence Phase 0 → 1 → 2D fusion → **2.5 GenAI Core** → 4 →
 
 ## 16. Build progress log
 
+### 2026-07-18 — Cognee Cloud tenant live (add → cognify → search)
+
+- Tenant base URL wired; `VERGE_COGNEE_ENABLED=true` locally  
+- Client hardened per docs (`X-Api-Key`, `/api/v1/*`, 402/503 handling, cognify timeout)  
+- Doc ingest now **create → add → cognify** (not add-only)  
+- Live smoke: health 200, Hot Work SOP cognified, search returns B-04 / LEL / EQ-OVEN-1 context  
+
 ### 2026-07-18 — Phase 2.5 continuation (console + GraphRAG + Cognee auto)
 
 - Console `InvestigationPanel` shows specialists + twin validator disposition  

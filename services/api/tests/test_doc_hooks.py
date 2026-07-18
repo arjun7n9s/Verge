@@ -41,12 +41,12 @@ def test_cognee_hook_auto_on_with_keys(monkeypatch) -> None:
         def from_env(env):
             return FakeClient()
 
-    def fake_ingest(client, dataset, title, text):
+    def fake_ingest(client, dataset, title, text, *, ensure_dataset=True):
         calls.append(title)
-        return type("R", (), {"degraded": False, "reason": ""})()
+        return type("R", (), {"degraded": False, "reason": "", "status_code": 200})()
 
     monkeypatch.setattr("verge_api.doc_hooks.CogneeClient", FakeClient)
-    monkeypatch.setattr("verge_api.doc_hooks.ingest_document", fake_ingest)
+    monkeypatch.setattr("verge_api.doc_hooks.ingest_and_cognify", fake_ingest)
     store = DocIntelStore()
     asset = DocumentAsset(
         document_id="DOC-1",
