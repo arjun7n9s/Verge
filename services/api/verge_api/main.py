@@ -71,7 +71,11 @@ from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
 from .routes.workers import router as workers_router
 from .seed import seed
-from .state_factory import make_permits_registry, make_reading_buffer
+from .state_factory import (
+    make_permits_registry,
+    make_reading_buffer,
+    make_voice_event_buffer,
+)
 from .stream_bus import StreamBus
 from .stream_notify import drain_outbox
 from .trace import current_trace_id, record_trace
@@ -207,7 +211,8 @@ if seed_enabled():
     app.state.readings.seed_from_replay()
 app.state.sensor_thresholds = _demo_plant.thresholds_by_kind()
 app.state.docintel = DocIntelStore()
-app.state.voice_events = []  # rolling VoiceEvent list for risk fusion
+app.state.voice_event_buffer = make_voice_event_buffer(store=store)
+app.state.voice_events = app.state.voice_event_buffer.events  # fusion reads this list
 app.state.vision_detections = []  # rolling VisionDetection list for risk fusion
 
 
@@ -231,7 +236,11 @@ def health() -> dict:
     return {
         "status": "ok",
         "seedMode": getattr(app.state, "seed_mode", seed_mode()),
-        "llm": {"provider": llm.name, "degraded": not llm.healthy()},
+        "llm": (
+            llm.health_detail()
+            if hasattr(llm, "health_detail")
+            else {"provider": llm.name, "degraded": not llm.healthy()}
+        ),
         "audit": {
             "entries": store.audit_len(),
             "head": store.audit_head(),

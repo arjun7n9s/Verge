@@ -11,7 +11,11 @@ from verge_schema.events import VoiceEvent
 
 def test_fuse_voice_hot_work() -> None:
     client = TestClient(app)
-    app.state.voice_events = [
+    from verge_api.voice_events import VoiceEventBuffer
+
+    app.state.voice_event_buffer = VoiceEventBuffer(engine=None)
+    app.state.voice_events = app.state.voice_event_buffer.events
+    app.state.voice_events.append(
         VoiceEvent(
             event_id="VE-TEST",
             ts=datetime.now(UTC),
@@ -20,7 +24,7 @@ def test_fuse_voice_hot_work() -> None:
             hazards=["gas", "smell"],
             source="radio",
         )
-    ]
+    )
     # Demo seed usually includes a hot-work permit in B-04.
     r = client.post("/api/risk/fuse", json={"persist": False})
     assert r.status_code == 200

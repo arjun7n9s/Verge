@@ -163,7 +163,11 @@ def ops_snapshot(
             "readings": readings.reading_count(),
             "lastReadingTs": readings.latest_ts(),
         },
-        "llm": {"provider": llm.name, "degraded": not llm.healthy()},
+        "llm": (
+            llm.health_detail()
+            if hasattr(llm, "health_detail")
+            else {"provider": llm.name, "degraded": not llm.healthy()}
+        ),
         "vision": _vision_health(vision),
         "speechmatics": _speechmatics_health(env),
         "cognee": _cognee_health(env),

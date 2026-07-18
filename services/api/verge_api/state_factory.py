@@ -10,6 +10,7 @@ from .factory import make_store
 from .permits_registry import PermitRegistry
 from .reading_buffer import ReadingBuffer
 from .store_base import StoreProtocol
+from .voice_events import VoiceEventBuffer
 
 
 def store_engine(store: StoreProtocol) -> Engine | None:
@@ -33,3 +34,12 @@ def make_reading_buffer(
     env = env if env is not None else dict(os.environ)
     store = store or make_store(env)
     return ReadingBuffer(store_engine(store))
+
+
+def make_voice_event_buffer(
+    env: dict[str, str] | None = None,
+    store: StoreProtocol | None = None,
+) -> VoiceEventBuffer:
+    env = env if env is not None else dict(os.environ)
+    store = store or make_store(env)
+    return VoiceEventBuffer(store_engine(store))

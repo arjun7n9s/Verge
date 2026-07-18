@@ -150,7 +150,7 @@ def _build_tools(app, finding) -> ToolRegistry:
         }
 
     def query_zone_graph(zone_id: str = "") -> dict:
-        """GraphRAG: local twin + Neo4j coverage + Document→MENTIONS hops."""
+        """GraphRAG: local twin + Neo4j coverage + doc/equipment multi-hops."""
         zid = zone_id or finding.zone_id
         local = get_equipment_graph(zid)
         local_hops = [
@@ -159,19 +159,30 @@ def _build_tools(app, finding) -> ToolRegistry:
         ]
         neo: dict = {"degraded": True, "reason": "skipped"}
         doc_hops: dict = {"degraded": True, "hops": [], "reason": "skipped"}
+        equip_hops: dict = {"degraded": True, "hops": [], "reason": "skipped"}
         try:
-            from verge_twin.neo4j_query import zone_document_hops, zone_graph_coverage
+            from verge_twin.neo4j_query import (
+                zone_document_hops,
+                zone_equipment_document_hops,
+                zone_graph_coverage,
+            )
             neo = zone_graph_coverage(zid, env=dict(os.environ))
             doc_hops = zone_document_hops(zid, env=dict(os.environ))
+            equip_hops = zone_equipment_document_hops(zid, env=dict(os.environ))
         except Exception as exc:
             neo = {"degraded": True, "reason": type(exc).__name__}
             doc_hops = {"degraded": True, "hops": [], "reason": type(exc).__name__}
+            equip_hops = {"degraded": True, "hops": [], "reason": type(exc).__name__}
+        merged = local_hops + list(doc_hops.get("hops") or []) + list(
+            equip_hops.get("hops") or []
+        )
         return {
             "zoneId": zid,
             "localTwin": local,
             "neo4j": neo,
             "documentHops": doc_hops,
-            "hops": local_hops + list(doc_hops.get("hops") or []),
+            "equipmentDocumentHops": equip_hops,
+            "hops": merged,
         }
 
     def get_recent_voice_events(zone_id: str = "") -> dict:

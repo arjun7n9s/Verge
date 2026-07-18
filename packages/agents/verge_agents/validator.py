@@ -101,7 +101,11 @@ def brief_text_blobs(brief: dict) -> list[str]:
 
 
 def _barrier_has_evidence(barrier: dict, evidence_tools: set[str], known_refs: set[str]) -> bool:
-    """A barrier is citation-backed if it names a tool used or a known ref id."""
+    """A barrier is citation-backed only if it names a used tool or known ref id.
+
+    A non-empty ``supportedBy`` string alone is not enough — the LLM can invent
+    vague labels like ``telemetry`` without tool evidence (G4 harden).
+    """
     hay = " ".join(
         str(barrier.get(k) or "")
         for k in ("action", "rationale", "supportedBy", "urgency")
@@ -109,9 +113,6 @@ def _barrier_has_evidence(barrier: dict, evidence_tools: set[str], known_refs: s
     if any(t.lower() in hay for t in evidence_tools):
         return True
     if any(ref.lower() in hay for ref in known_refs if len(ref) >= 3):
-        return True
-    # Explicit supportedBy field present and non-empty
-    if str(barrier.get("supportedBy") or "").strip():
         return True
     return False
 
@@ -148,13 +149,13 @@ def validate_brief(
         muster_ids=catalog.muster_ids,
     )
 
-    # Collect invented tags across the whole brief (relative to catalog).
+    # Invented-tag scan always runs against catalog ∪ extras (empty catalog
+    # still rejects tags not in extra_known / known_refs).
     invented: set[str] = set()
-    if catalog.all_ids():
-        for blob in brief_text_blobs(brief):
-            for tag in extract_candidate_tags(blob, effective):
-                if not _known(tag):
-                    invented.add(tag)
+    for blob in brief_text_blobs(brief):
+        for tag in extract_candidate_tags(blob, effective):
+            if not _known(tag):
+                invented.add(tag)
 
     demoted: list[dict] = []
     notes: list[str] = []
@@ -166,7 +167,7 @@ def validate_brief(
             str(barrier.get(k) or "") for k in ("action", "rationale", "supportedBy")
         )
         barrier_tags = extract_candidate_tags(barrier_text, effective)
-        bad = {t for t in barrier_tags if catalog.all_ids() and not _known(t)}
+        bad = {t for t in barrier_tags if not _known(t)}
         if bad:
             demoted.append({**barrier, "reason": f"invented-tags:{sorted(bad)}"})
             out["openQuestions"].append(

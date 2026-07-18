@@ -8,6 +8,8 @@
 from __future__ import annotations
 
 import json
+import time
+from datetime import UTC, datetime
 
 from .base import Completion, Message, ToolCall
 
@@ -20,6 +22,8 @@ class NullProvider:
     """
 
     name = "null"
+    last_ok_ts: str | None = None
+    last_fail_reason: str | None = None
 
     def complete(
         self,
@@ -30,6 +34,8 @@ class NullProvider:
         temperature: float = 0.2,
     ) -> Completion:
         last = messages[-1].content if messages else ""
+        if not isinstance(last, str):
+            last = str(last)
         return Completion(
             text=f"[null-provider] narrative unavailable; echo: {last[:160]}",
             model=model or "null",
@@ -56,6 +62,15 @@ class NullProvider:
     def healthy(self) -> bool:
         return True
 
+    def health_detail(self) -> dict:
+        return {
+            "provider": self.name,
+            "degraded": False,
+            "probe": "null",
+            "lastOkTs": self.last_ok_ts,
+            "lastFailReason": self.last_fail_reason,
+        }
+
 
 class OpenAICompatProvider:
     """Talks to any OpenAI-compatible /chat/completions endpoint.
@@ -73,20 +88,33 @@ class OpenAICompatProvider:
         api_key: str | None,
         default_model: str,
         timeout_s: float = 20.0,
+        health_timeout_s: float = 3.0,
+        health_ttl_s: float = 45.0,
     ) -> None:
         self.name = name
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._default_model = default_model
         self._timeout_s = timeout_s
+        self._health_timeout_s = health_timeout_s
+        self._health_ttl_s = health_ttl_s
+        self._health_cached_ok: bool | None = None
+        self._health_cached_at: float = 0.0
+        self.last_ok_ts: str | None = None
+        self.last_fail_reason: str | None = None
+        self._health_probe_count: int = 0  # testability
 
-    def _client(self):
+    def _client(self, *, timeout_s: float | None = None):
         import httpx  # lazy: only needed when an LLM is actually configured
 
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
-        return httpx.Client(base_url=self._base_url, headers=headers, timeout=self._timeout_s)
+        return httpx.Client(
+            base_url=self._base_url,
+            headers=headers,
+            timeout=timeout_s if timeout_s is not None else self._timeout_s,
+        )
 
     @staticmethod
     def _wire_messages(messages: list[Message]) -> list[dict]:
@@ -121,13 +149,16 @@ class OpenAICompatProvider:
                 resp.raise_for_status()
                 data = resp.json()
             text = data["choices"][0]["message"]["content"]
+            self.last_ok_ts = datetime.now(UTC).isoformat()
+            self.last_fail_reason = None
             return Completion(text=text, model=mdl, usage=data.get("usage", {}))
         except Exception as exc:  # degrade, never raise into the safety path (P1)
+            self.last_fail_reason = f"{self.name} unreachable: {type(exc).__name__}"
             return Completion(
                 text="",
                 model=mdl,
                 degraded=True,
-                reason=f"{self.name} unreachable: {type(exc).__name__}",
+                reason=self.last_fail_reason,
             )
 
     def chat(
@@ -174,6 +205,8 @@ class OpenAICompatProvider:
                 calls.append(
                     ToolCall(id=tc.get("id", ""), name=fn.get("name", ""), arguments=args, raw=tc)
                 )
+            self.last_ok_ts = datetime.now(UTC).isoformat()
+            self.last_fail_reason = None
             return Completion(
                 text=msg.get("content") or "",
                 model=mdl,
@@ -181,17 +214,52 @@ class OpenAICompatProvider:
                 tool_calls=tuple(calls),
             )
         except Exception as exc:  # degrade, never raise (P1)
+            self.last_fail_reason = f"{self.name} unreachable: {type(exc).__name__}"
             return Completion(
                 text="",
                 model=mdl,
                 degraded=True,
-                reason=f"{self.name} unreachable: {type(exc).__name__}",
+                reason=self.last_fail_reason,
             )
 
-    def healthy(self) -> bool:
+    def _probe_chat(self) -> bool:
+        """Hit the same path production uses — not GET /models."""
+        self._health_probe_count += 1
+        body = {
+            "model": self._default_model,
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_tokens": 1,
+            "temperature": 0.0,
+        }
         try:
-            with self._client() as client:
-                client.get("/models")
+            with self._client(timeout_s=self._health_timeout_s) as client:
+                resp = client.post("/chat/completions", json=body)
+                resp.raise_for_status()
+            self.last_ok_ts = datetime.now(UTC).isoformat()
+            self.last_fail_reason = None
             return True
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            self.last_fail_reason = f"health probe: {type(exc).__name__}"
             return False
+
+    def healthy(self) -> bool:
+        now = time.monotonic()
+        if (
+            self._health_cached_ok is not None
+            and (now - self._health_cached_at) < self._health_ttl_s
+        ):
+            return self._health_cached_ok
+        ok = self._probe_chat()
+        self._health_cached_ok = ok
+        self._health_cached_at = now
+        return ok
+
+    def health_detail(self) -> dict:
+        degraded = not self.healthy()
+        return {
+            "provider": self.name,
+            "degraded": degraded,
+            "probe": "chat.completions",
+            "lastOkTs": self.last_ok_ts,
+            "lastFailReason": self.last_fail_reason if degraded else None,
+        }

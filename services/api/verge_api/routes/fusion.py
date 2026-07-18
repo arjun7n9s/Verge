@@ -42,6 +42,9 @@ def _sensors_and_readings(buf) -> tuple[dict[str, Sensor], dict[str, list[Readin
                 ts = datetime.fromisoformat(str(p["ts"]).replace("Z", "+00:00"))
             except ValueError:
                 continue
+            # SQLite often returns naive timestamps; risk health compares to UTC now.
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=UTC)
             series.append(Reading(sensor_id=sid, ts=ts, value=float(p["value"])))
         if series:
             readings[sid] = series

@@ -80,7 +80,54 @@ def test_uncited_barrier_demoted():
     assert report.demoted_barriers[0]["reason"] == "uncited"
 
 
-def test_empty_catalog_skips_invented_tag_gate():
+def test_fake_supported_by_without_tool_or_ref_is_demoted():
+    brief = {
+        "summary": "Watch band in B-04.",
+        "hypotheses": [],
+        "recommendedBarriers": [
+            {
+                "action": "Increase patrols in B-04",
+                "urgency": "this-shift",
+                "rationale": "sounds right",
+                "supportedBy": "telemetry",
+            }
+        ],
+        "regulatoryRefs": [],
+        "openQuestions": [],
+    }
+    out, report = validate_brief(
+        brief, _catalog(), evidence_tools=["get_finding"], known_refs=["VE-ABC"]
+    )
+    assert out["recommendedBarriers"] == []
+    assert report.demoted_barriers[0]["reason"] == "uncited"
+
+
+def test_known_ref_in_supported_by_keeps_barrier():
+    brief = {
+        "summary": "Radio report in B-04.",
+        "hypotheses": [],
+        "recommendedBarriers": [
+            {
+                "action": "Pause hot work in B-04",
+                "urgency": "immediate",
+                "rationale": "gas smell on radio",
+                "supportedBy": "VE-ABC123",
+            }
+        ],
+        "regulatoryRefs": [],
+        "openQuestions": [],
+    }
+    out, report = validate_brief(
+        brief,
+        _catalog(),
+        evidence_tools=["get_recent_voice_events"],
+        known_refs=["VE-ABC123"],
+    )
+    assert len(out["recommendedBarriers"]) == 1
+    assert report.ok is True
+
+
+def test_empty_catalog_still_flags_unknown_tags():
     brief = {
         "summary": "Mention FAKE-99 freely.",
         "hypotheses": [],
@@ -98,5 +145,5 @@ def test_empty_catalog_skips_invented_tag_gate():
     out, report = validate_brief(
         brief, TwinCatalog.empty(), evidence_tools=["search_plant_docs"]
     )
-    assert out["recommendedBarriers"]  # no catalog → cannot claim invented
-    assert report.invented_tags == []
+    assert "FAKE-99" in report.invented_tags
+    assert out["recommendedBarriers"] == []

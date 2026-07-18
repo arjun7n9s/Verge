@@ -123,3 +123,80 @@ def zone_document_hops(
         }
     except Exception as exc:
         return {"degraded": True, "hops": [], "reason": type(exc).__name__}
+
+
+def zone_equipment_document_hops(
+    zone_id: str,
+    *,
+    env: dict[str, str] | None = None,
+    limit: int = 12,
+) -> dict[str, Any]:
+    """GraphRAG multi-hop: Zone → Equipment → Document MENTIONS.
+
+    Path shape: ``(Zone)-[:HAS_SENSOR]->(Equipment)`` joined to
+    ``(Document)-[:MENTIONS]->(mention)`` when the mention matches the
+    equipment id / normalized tag. Degrades cleanly when Neo4j is unset.
+    """
+    env = dict(os.environ) if env is None else env
+    creds = _auth(env)
+    if creds is None:
+        return {"degraded": True, "hops": [], "reason": "neo4j not configured"}
+    uri, user, password = creds
+
+    try:
+        from neo4j import GraphDatabase
+    except ImportError:
+        return {"degraded": True, "hops": [], "reason": "neo4j driver missing"}
+
+    cypher = """
+    MATCH (z:Zone {id: $zone})-[:HAS_SENSOR]->(eq:Equipment)
+    MATCH (d:Document)-[:MENTIONS]->(m)
+    WHERE m.id = eq.id
+       OR m.normalized = eq.id
+       OR m.raw = eq.id
+       OR (m.normalized IS NOT NULL AND toLower(m.normalized) CONTAINS toLower(eq.id))
+       OR (m.raw IS NOT NULL AND toLower(m.raw) CONTAINS toLower(eq.id))
+    RETURN z.id AS zoneId,
+           eq.id AS equipmentId,
+           d.id AS documentId,
+           d.title AS title,
+           m.id AS mentionId,
+           m.normalized AS mentionNorm,
+           labels(m) AS mentionLabels
+    LIMIT $limit
+    """
+    try:
+        driver = GraphDatabase.driver(uri, auth=(user, password))
+        hops: list[dict[str, Any]] = []
+        with driver.session() as session:
+            rows = session.run(cypher, zone=zone_id, limit=int(limit))
+            for row in rows:
+                hops.append({
+                    "from": row["documentId"],
+                    "rel": "MENTIONS_EQUIPMENT_IN_ZONE",
+                    "to": row["equipmentId"],
+                    "title": row["title"],
+                    "mentionId": row["mentionId"],
+                    "mentionNorm": row["mentionNorm"],
+                    "mentionLabels": list(row["mentionLabels"] or []),
+                    "path": [
+                        {"kind": "Document", "id": row["documentId"]},
+                        {"kind": "MENTIONS", "id": None},
+                        {
+                            "kind": (row["mentionLabels"] or ["Entity"])[0],
+                            "id": row["mentionId"],
+                        },
+                        {"kind": "Equipment", "id": row["equipmentId"]},
+                        {"kind": "Zone", "id": zone_id},
+                    ],
+                })
+        driver.close()
+        return {
+            "degraded": False,
+            "zoneId": zone_id,
+            "hops": hops,
+            "count": len(hops),
+            "reason": "" if hops else "no-equipment-document-hops",
+        }
+    except Exception as exc:
+        return {"degraded": True, "hops": [], "reason": type(exc).__name__}

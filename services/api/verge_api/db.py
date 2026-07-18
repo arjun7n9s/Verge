@@ -103,6 +103,19 @@ outbox_event = Table(
     Column("published_at", DateTime(timezone=True), nullable=True, index=True),
 )
 
+voice_event = Table(
+    "voice_event", metadata,
+    Column("event_id", String, primary_key=True),
+    Column("ts", DateTime(timezone=True), index=True, nullable=False),
+    Column("transcript", String, nullable=False, default=""),
+    Column("transcript_original", String, nullable=True),
+    Column("languages_detected", JSON, nullable=False),
+    Column("zone_id", String, nullable=True, index=True),
+    Column("hazards", JSON, nullable=False),
+    Column("equipment_ids", JSON, nullable=False),
+    Column("source", String, nullable=False, default="radio"),
+)
+
 
 def _boot_strategy(url: str) -> tuple[bool, bool]:
     """Return (use_migrate, use_create_all) for this URL and environment."""

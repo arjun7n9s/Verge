@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import delete, insert, select
@@ -37,10 +37,25 @@ class ReadingBuffer:
                 select(db.sensor_reading).order_by(db.sensor_reading.c.ts)
             ).mappings().all()
         for row in rows:
+            ts = row["ts"]
+            if isinstance(ts, datetime):
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=UTC)
+                ts_s = ts.isoformat()
+            else:
+                ts_s = str(ts)
+                if ts_s.endswith("Z"):
+                    pass
+                elif "+" not in ts_s[10:] and "Z" not in ts_s:
+                    # Naive ISO from SQLite — treat as UTC for fusion health.
+                    try:
+                        ts_s = datetime.fromisoformat(ts_s).replace(tzinfo=UTC).isoformat()
+                    except ValueError:
+                        pass
             self._append_point(
                 row["sensor_id"],
                 {
-                    "ts": row["ts"].isoformat() if isinstance(row["ts"], datetime) else row["ts"],
+                    "ts": ts_s,
                     "value": float(row["value"]),
                     "zoneId": row["zone_id"],
                     "kind": row["kind"],
