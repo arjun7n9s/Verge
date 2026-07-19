@@ -1,8 +1,10 @@
-import { Link, NavLink, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useFindingsStore } from '@/stores/findings';
 import { useConnectionStore } from '@/stores/connection';
 import { SensorRibbon } from '@/components/organisms/SensorRibbon';
 import { DegradationBannerStrip } from '@/components/organisms/DegradationBannerStrip';
+import { TranscriptTicker } from '@/components/organisms/TranscriptTicker';
+import { VisionOpsStrip } from '@/components/organisms/VisionOpsStrip';
 import { CommandPalette } from '@/components/organisms/CommandPalette';
 import { Activity, BarChart2, Settings, History, ArrowRightLeft, Shield, Search, BookOpen } from 'lucide-react';
 import { Logo, Toaster, Kbd } from '@/components/atoms';
@@ -27,6 +29,8 @@ export default function AppShell() {
   const { shadow, setShadow } = useFindingsStore();
   const { status } = useConnectionStore();
   const { t, i18n } = useTranslation();
+  const { pathname } = useLocation();
+  const onBoard = pathname === '/';
 
   return (
     <div className="min-h-screen bg-bg text-ink flex flex-col font-sans select-none">
@@ -126,10 +130,18 @@ export default function AppShell() {
         </div>
       </header>
 
-      {/* Sensor health ribbon */}
-      <SensorRibbon />
+      {/* Sensor health ribbon — Board / Map only (design_plan chrome rule) */}
+      {onBoard && <SensorRibbon />}
 
       <DegradationBannerStrip />
+
+      {/* Phase 2 live fusion strips — Board only; Ash owns craft polish later */}
+      {onBoard && (
+        <>
+          <TranscriptTicker />
+          <VisionOpsStrip />
+        </>
+      )}
 
       {/* Shadow banner — a calm tinted well with ink text, not a shout.
           The micro-label carries the state; prose stays sentence case. */}

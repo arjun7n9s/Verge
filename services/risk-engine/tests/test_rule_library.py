@@ -21,9 +21,9 @@ def _rules():
     return load_rules(STARTER_RULES)
 
 
-def test_library_has_at_least_30_valid_rules():
+def test_library_has_at_least_60_valid_rules():
     rules = _rules()
-    assert len(rules) >= 30
+    assert len(rules) >= 60
     assert all(r.predicates for r in rules)  # no empty rules
     assert len({r.id for r in rules}) == len(rules)  # ids unique
 

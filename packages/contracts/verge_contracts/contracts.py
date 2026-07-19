@@ -55,6 +55,8 @@ def _type_ok(value: object, type_: str) -> bool:
             and not isinstance(value, bool)
             and math.isfinite(value)
         )
+    if type_ == "list":
+        return isinstance(value, list)
     if type_ == "iso-datetime":
         if not isinstance(value, str):
             return False
@@ -144,6 +146,53 @@ WORKER_LOCATION_V1 = EventContract(
     ),
 )
 
+VOICE_EVENT_V1 = EventContract(
+    "voice-event", "1.0.0",
+    (
+        FieldSpec("ts", "iso-datetime"),
+        FieldSpec("eventId", "str", required=False),
+        FieldSpec("transcript", "str"),
+        FieldSpec("zoneId", "str", required=False),
+        FieldSpec("hazards", "list", required=False),
+        FieldSpec("source", "str", required=False),
+    ),
+)
+
+VISION_DETECTION_V1 = EventContract(
+    "vision-detection", "1.0.0",
+    (
+        FieldSpec("ts", "iso-datetime"),
+        FieldSpec("zoneId", "str"),
+        FieldSpec("cameraId", "str"),
+        FieldSpec("label", "str"),
+        FieldSpec("confidence", "number", required=False),
+        FieldSpec("detectionId", "str", required=False),
+        FieldSpec("frameUri", "str", required=False),
+    ),
+)
+
+MAINTENANCE_V1 = EventContract(
+    "maintenance", "1.0.0",
+    (
+        FieldSpec("ts", "iso-datetime"),
+        FieldSpec("orderId", "str"),
+        FieldSpec("equipmentId", "str"),
+        FieldSpec("state", "str", required=False),
+        FieldSpec("zoneId", "str", required=False),
+    ),
+)
+
+CAPA_V1 = EventContract(
+    "capa", "1.0.0",
+    (
+        FieldSpec("ts", "iso-datetime"),
+        FieldSpec("actionId", "str"),
+        FieldSpec("state", "str", required=False),
+        FieldSpec("zoneId", "str", required=False),
+        FieldSpec("title", "str", required=False),
+    ),
+)
+
 
 @dataclass
 class ContractResult:
@@ -166,7 +215,16 @@ class ContractRegistry:
 
     def __init__(self, contracts: Iterable[EventContract] | None = None) -> None:
         self._by_type: dict[str, list[EventContract]] = {}
-        for c in contracts or (READING_V1, PERMIT_V1, SHIFT_V1, WORKER_LOCATION_V1):
+        for c in contracts or (
+            READING_V1,
+            PERMIT_V1,
+            SHIFT_V1,
+            WORKER_LOCATION_V1,
+            VOICE_EVENT_V1,
+            VISION_DETECTION_V1,
+            MAINTENANCE_V1,
+            CAPA_V1,
+        ):
             self.register(c)
 
     def register(self, contract: EventContract) -> None:

@@ -9,6 +9,16 @@ from verge_schema.core import MaintenanceOrder, Permit, Reading, Sensor
 from verge_schema.events import VisionDetection, VoiceEvent
 
 
+@dataclass(frozen=True)
+class OpenCapa:
+    """Lightweight open corrective-action fact for ``open_capa`` predicate."""
+
+    action_id: str
+    state: str
+    zone_id: str | None = None
+    title: str = ""
+
+
 @dataclass
 class RiskContext:
     """Everything the engine needs at one instant. Built from the streams by the
@@ -24,6 +34,9 @@ class RiskContext:
     vision_detections: list[VisionDetection] = field(default_factory=list)
     maintenance_orders: list[MaintenanceOrder] = field(default_factory=list)
     worker_zones: dict[str, str] = field(default_factory=dict)  # worker_id -> zone_id
+    # zone_id -> set of adjacent zone ids (from twin pack)
+    zone_adjacency: dict[str, set[str]] = field(default_factory=dict)
+    open_capas: list[OpenCapa] = field(default_factory=list)
 
     def zone(self, zone_id: str) -> ZoneView:
         return ZoneView(self, zone_id)

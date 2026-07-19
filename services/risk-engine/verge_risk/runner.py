@@ -23,7 +23,7 @@ from verge_schema.core import MaintenanceOrder, Permit, Reading, Sensor
 from verge_schema.events import VisionDetection, VoiceEvent
 from verge_schema.findings import RiskFinding
 
-from .context import RiskContext
+from .context import OpenCapa, RiskContext
 from .dedupe_store import DedupeStore
 from .rules import Rule
 
@@ -36,6 +36,16 @@ WINDOW = 12  # readings per sensor (~6 min at 30s cadence)
 MAX_PERMITS = 500
 MAX_VOICE = 200
 MAX_VISION = 200
+# Event kinds that change the risk picture and must re-evaluate (Phase 2).
+_REEVAL_KINDS = frozenset({
+    "reading",
+    "permit",
+    "voice-event",
+    "vision-detection",
+    "maintenance",
+    "worker-location",
+    "capa",
+})
 
 
 def _dt(s: str) -> datetime:
@@ -57,6 +67,8 @@ class StreamState:
         self.vision_detections: list[VisionDetection] = []
         self.maintenance_orders: list[MaintenanceOrder] = []
         self.worker_zones: dict[str, str] = {}
+        self.open_capas: list[OpenCapa] = []
+        self.zone_adjacency: dict[str, set[str]] = {}
         self.now: datetime | None = None
 
     def _prune_permits(self) -> None:
@@ -131,6 +143,19 @@ class StreamState:
             )
         elif kind == "worker-location":
             self.worker_zones[e["workerId"]] = e["zoneId"]
+        elif kind == "capa":
+            self.open_capas.append(
+                OpenCapa(
+                    action_id=e["actionId"],
+                    state=e.get("state", "open"),
+                    zone_id=e.get("zoneId"),
+                    title=e.get("title", ""),
+                )
+            )
+            # Keep only non-closed; closed-effective drops out of the working set.
+            self.open_capas = [
+                c for c in self.open_capas if c.state != "closed-effective"
+            ][-200:]
         return kind
 
     def in_changeover(self) -> bool:
@@ -147,6 +172,8 @@ class StreamState:
             vision_detections=list(self.vision_detections),
             maintenance_orders=list(self.maintenance_orders),
             worker_zones=dict(self.worker_zones),
+            zone_adjacency={k: set(v) for k, v in self.zone_adjacency.items()},
+            open_capas=list(self.open_capas),
         )
 
 
@@ -172,6 +199,7 @@ def run_stream(
     enable_ml: bool = False,
     validate_contracts: bool = True,
     dedupe: DedupeStore | None = None,
+    zone_adjacency: dict[str, set[str]] | None = None,
 ) -> int:
     """Drive the engine over a live stream. Runs the gas rules plus any injected
     detectors (e.g. SIMOPS), emits each qualifying finding once (deduped by zone
@@ -186,6 +214,8 @@ def run_stream(
 
     detectors = detectors or []
     state = StreamState(thresholds, window=window)
+    if zone_adjacency:
+        state.zone_adjacency = {k: set(v) for k, v in zone_adjacency.items()}
     cep_state = None
     if enable_cep:
         from .cep import CepState, evaluate_cep
@@ -203,8 +233,9 @@ def run_stream(
             kind = state.ingest(e)
             if event_hook is not None:
                 event_hook(e)
-            # readings and permits both change the risk picture; re-evaluate on either.
-            if kind not in ("reading", "permit"):
+            # Re-evaluate on any fusion-relevant event (readings, permits, voice,
+            # vision, maintenance, workers, CAPA) — not only sensor/permit ticks.
+            if kind not in _REEVAL_KINDS:
                 if after_event is not None:
                     after_event(e)
                 continue

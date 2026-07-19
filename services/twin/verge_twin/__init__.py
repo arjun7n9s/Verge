@@ -21,6 +21,7 @@ from .plant import (
     ZoneNode,
     load_plant,
 )
+from .voice_graph import sync_voice_event
 
 __all__ = [
     "DEMO_PLANT",
@@ -40,6 +41,7 @@ __all__ = [
     "load_plant",
     "load_zone_geometries",
     "map_sensors",
+    "sync_voice_event",
     "to_plant_yaml",
     "validate_layout",
 ]

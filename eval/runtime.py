@@ -90,6 +90,7 @@ def run_verge_stream(
         detectors=detectors,
         window=window,
         min_confidence=0.8,
+        zone_adjacency=adjacency,
     )
 
     gas_bands = {LeadTimeBand.IMMINENT, LeadTimeBand.NEAR, LeadTimeBand.WATCH}
@@ -111,3 +112,39 @@ def band_calibrated(band: LeadTimeBand | None, lead_min: float | None) -> bool |
     if lo is not None and lead_min < lo:
         return False
     return not (hi is not None and lead_min >= hi)
+
+
+def compound_catch_stats(
+    gt: dict,
+    events: list[dict],
+    *,
+    window: int = DEFAULT_WINDOW,
+) -> dict:
+    """Share of Verge findings whose lineage spans ≥2 signal kinds (Phase 2)."""
+    rules = load_rules(STARTER_RULES)
+    thresholds, adjacency, simops = resolve_runtime(gt)
+    collected: list = []
+    detectors = [simops_detector(adjacency)] if simops else []
+    run_stream(
+        events,
+        rules,
+        collected.append,
+        thresholds=thresholds,
+        detectors=detectors,
+        window=window,
+        min_confidence=0.8,
+        zone_adjacency=adjacency,
+    )
+    zone = gt["zoneId"]
+    zone_findings = [f for f in collected if f.zone_id == zone and f.confidence >= 0.8]
+    compound = [
+        f
+        for f in zone_findings
+        if len({s.kind for s in f.contributing_signals}) >= 2
+    ]
+    total = len(zone_findings)
+    return {
+        "findings": total,
+        "compound": len(compound),
+        "catchRate": round(len(compound) / total, 3) if total else None,
+    }

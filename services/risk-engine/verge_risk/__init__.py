@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from .context import RiskContext, ZoneView
+from .context import OpenCapa, RiskContext, ZoneView
 from .engine import evaluate
 from .health import classify, is_degraded, ribbon
 from .rules import Rule, load_rules
@@ -12,6 +12,7 @@ STARTER_RULES = Path(__file__).parent / "rules"
 
 __all__ = [
     "STARTER_RULES",
+    "OpenCapa",
     "RiskContext",
     "Rule",
     "StreamState",

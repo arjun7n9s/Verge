@@ -1,5 +1,23 @@
 # Dex Progress Log
 
+## 2026-07-19 — Phase 2 Live Fusion closed in depth
+
+### Done
+- Whisper fallback (`VERGE_WHISPER_ENABLED` + Faster-Whisper) with silent+banner degrade
+- Neo4j `(:VoiceEvent)-[:ABOUT]->(:Zone|:Equipment)` best-effort sync
+- Stream runner re-eval on voice/vision/maintenance/worker/capa
+- Live fuse loads workers, maintenance, CAPA, zone adjacency
+- Predicates `adjacent_permit` + `open_capa`; starter rules **60+**
+- RTSP/file worker, MinIO frame URI on detect-frame
+- Board transcript ticker + Vision Ops strip (Ash crafts later)
+- Contracts for voice/vision/maintenance/capa; harness compound catch-rate column
+
+### Next
+- Ash: design_plan U1–U6
+- Eng: Phase 3 specialists
+
+---
+
 ## 2026-07-19 — Standalone design_plan.md
 
 ### Decision

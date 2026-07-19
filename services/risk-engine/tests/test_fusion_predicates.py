@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 from verge_risk import STARTER_RULES, evaluate, load_rules
-from verge_risk.context import RiskContext
+from verge_risk.context import OpenCapa, RiskContext
 from verge_schema.core import MaintenanceOrder, Permit, Reading, Sensor
 from verge_schema.events import VisionDetection, VoiceEvent
 
@@ -142,3 +142,57 @@ def test_maintenance_open_with_vibration() -> None:
     )
     findings = evaluate(ctx, RULES)
     assert any("maintenance" in f.title.lower() for f in findings)
+
+
+def test_adjacent_permit_hot_work_confined() -> None:
+    ctx = RiskContext(
+        now=NOW,
+        sensors={},
+        readings={},
+        permits=[
+            Permit(
+                permit_id="PW-HW",
+                kind="hot-work",
+                zone_id="B-04",
+                valid_from=NOW - timedelta(hours=1),
+                valid_to=NOW + timedelta(hours=1),
+            ),
+            Permit(
+                permit_id="PW-CS",
+                kind="confined-space",
+                zone_id="B-05",
+                valid_from=NOW - timedelta(hours=1),
+                valid_to=NOW + timedelta(hours=1),
+            ),
+        ],
+        zone_adjacency={"B-04": {"B-05"}, "B-05": {"B-04"}},
+    )
+    findings = evaluate(ctx, RULES)
+    assert any("adjacent" in f.title.lower() for f in findings)
+
+
+def test_open_capa_with_hot_work() -> None:
+    ctx = RiskContext(
+        now=NOW,
+        sensors={},
+        readings={},
+        permits=[
+            Permit(
+                permit_id="PW-HW",
+                kind="hot-work",
+                zone_id="B-04",
+                valid_from=NOW - timedelta(hours=1),
+                valid_to=NOW + timedelta(hours=1),
+            )
+        ],
+        open_capas=[
+            OpenCapa(
+                action_id="CA-1",
+                state="open",
+                zone_id="B-04",
+                title="Fix LEL sensor calibration",
+            )
+        ],
+    )
+    findings = evaluate(ctx, RULES)
+    assert any("capa" in f.title.lower() for f in findings)

@@ -8,21 +8,21 @@
 
 ## 0. Pickup bookmark — 2026-07-18 (UI-first pause)
 
-**Status:** Backend GenAI / voice / memory **core hold**. Next work is **console UX structure** before more Phase 2 depth or Phase 3 specialists.
+**Status:** Phase 2 Live Fusion closed in depth (2026-07-19). Ash resumes design_plan craft; eng next = Phase 3 specialists after UI structure.
 
 | Item | State |
 |---|---|
-| **Last engineering commits** | `c8ab8af` Melia+Cognee pipelines · `4455456` core harden (LLM health, durable voice, hard validator, GraphRAG hop) |
+| **Last engineering commits** | Phase 2 depth: Whisper fallback, Neo4j VoiceEvent, RTSP worker, MinIO frames, adjacent_permit/open_capa, 60+ rules, transcript/vision strips |
 | **Phase 0 / 1** | Done (truth gate + Knowledge spine v0) |
-| **Phase 2.5 GenAI Core** | **Done** (orchestrator, specialists, Cognee auto-on, Melia English ops, validator harden, agent evals, P1 lint) |
-| **Phase 2 Live Risk** | **Partially done** — predicates/fusion/voice+vision events/API live; **open:** RTSP/YOLO polish, Whisper degrade path, Neo4j VoiceEvent edges, console transcript ticker, full Phase 2 exit criteria |
-| **Phase 3 Specialists** | **Not started** — RCA / compliance-depth / lessons under orchestrator |
-| **Phase 4 Premium UI** | **Next** — see [`design_plan.md`](./design_plan.md) (UI/UX, separate from this phased eng plan) |
+| **Phase 2.5 GenAI Core** | **Done** |
+| **Phase 2 Live Risk** | **Done (exit criteria)** — see §7 checklist; PPE YOLO still advisory/VLM (honest) |
+| **Phase 3 Specialists** | **Next eng** — RCA / compliance-depth / lessons under orchestrator |
+| **Phase 4 Premium UI** | Ash + [`design_plan.md`](./design_plan.md) — U1–U6 IA (partial WIP on Finding page) |
 
-**Resume order after UI plan lands**
-1. Implement console from [`design_plan.md`](./design_plan.md) (Board · Finding · Plant Copilot · Graph).  
-2. Close remaining Phase 2 exit criteria that the UI plan depends on.  
-3. Then Phase 3 specialists (RCA → compliance → lessons), not before the operator story is clear.
+**Resume order**
+1. Ash: design_plan U1–U6 craft.  
+2. Eng: Phase 3 specialists.  
+3. Summit proof (Phase 5) when packs + UI story land.
 
 **Detailed session log:** [`progress.md`](./progress.md) → UI-first entries.
 
@@ -315,9 +315,9 @@ gantt
 **DoD:** One end-to-end Act 3 demo: live convergence + cited SOP + OISD clause + voice snippet.
 
 ### Phase 2 exit criteria
-- [ ] Sims **or** your live MQTT feed → findings on console without seed findings  
-- [ ] Vision + voice each contribute at least once to a demo finding lineage  
-- [ ] Degrade: stop Speechmatics → Whisper or silent voice with banner; risk still runs  
+- [x] Sims **or** your live MQTT feed → findings on console without seed findings  
+- [x] Vision + voice each contribute at least once to a demo finding lineage  
+- [x] Degrade: stop Speechmatics → Whisper or silent voice with banner; risk still runs  
 
 ---
 

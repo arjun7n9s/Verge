@@ -134,7 +134,17 @@ class VoiceEventBuffer:
         self.events.append(ev)
         del self.events[: -self._max]
         self._persist(ev)
+        self._sync_neo4j(ev)
         return ev
+
+    def _sync_neo4j(self, ev: VoiceEvent) -> None:
+        """Best-effort KG link; never raises into the voice ingest path."""
+        try:
+            from verge_twin.voice_graph import sync_voice_event
+
+            sync_voice_event(ev)
+        except Exception:
+            return
 
     def list_recent(self, *, limit: int = 50) -> list[VoiceEvent]:
         cap = max(1, min(limit, self._max))

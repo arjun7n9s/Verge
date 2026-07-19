@@ -166,16 +166,29 @@ def operator_banners(
 
     try:
         from verge_voice import speechmatics_status
+        from verge_voice.whisper_fallback import whisper_status
 
         stt = speechmatics_status(dict(env))
-        if stt.get("degraded"):
+        whisper = whisper_status(dict(env))
+        sm_reason = stt.get("reason")
+        if sm_reason and whisper.get("available"):
+            banners.append({
+                "code": "speechmatics-degraded-whisper-active",
+                "severity": "info",
+                "message": (
+                    "Speechmatics unavailable ("
+                    f"{sm_reason}); Faster-Whisper fallback active "
+                    f"({whisper.get('model') or 'tiny'})."
+                ),
+            })
+        elif stt.get("degraded") or sm_reason:
             banners.append({
                 "code": "speechmatics-degraded",
                 "severity": "warn",
                 "message": (
                     "Radio/voice STT: degraded ("
-                    f"{stt.get('reason') or 'Speechmatics unavailable'}). "
-                    "Text handover and rule engine remain available."
+                    f"{sm_reason or 'Speechmatics unavailable'}). "
+                    "Silent voice path — text handover and rule engine remain available."
                 ),
             })
     except Exception as exc:  # noqa: BLE001

@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 from verge_risk import STARTER_RULES, evaluate, load_rules
-from verge_risk.context import RiskContext
-from verge_schema.core import Reading, Sensor
+from verge_risk.context import OpenCapa, RiskContext
+from verge_schema.core import MaintenanceOrder, Reading, Sensor
 from verge_schema.events import VisionDetection, VoiceEvent
 
 router = APIRouter(tags=["fusion"])
@@ -18,6 +18,73 @@ class FuseBody(BaseModel):
     persist: bool = False
     inChangeover: bool = False
     limit: int = Field(default=50, ge=1, le=200)
+
+
+def _worker_zones(app_state) -> dict[str, str]:
+    occ = getattr(app_state, "occupancy", None)
+    if occ is None:
+        return {}
+    roster = getattr(occ, "zone_roster", None)
+    if callable(roster):
+        out: dict[str, str] = {}
+        for zone_id, workers in (roster() or {}).items():
+            for w in workers:
+                wid = w.get("workerId") if isinstance(w, dict) else getattr(w, "worker_id", None)
+                if wid:
+                    out[str(wid)] = str(zone_id)
+        return out
+    # Fallback: OccupancyTracker._fixes style
+    fixes = getattr(occ, "_fixes", None) or getattr(occ, "fixes", None) or {}
+    out = {}
+    for wid, fix in fixes.items():
+        zid = fix.get("zoneId") if isinstance(fix, dict) else getattr(fix, "zone_id", None)
+        if zid:
+            out[str(wid)] = str(zid)
+    return out
+
+
+def _open_capas(app_state) -> list[OpenCapa]:
+    actions = getattr(app_state, "actions", None)
+    if actions is None:
+        return []
+    store = getattr(app_state, "store", None)
+    out: list[OpenCapa] = []
+    for a in actions.list():
+        if a.state == "closed-effective":
+            continue
+        zone_id = None
+        if a.finding_id and store is not None and hasattr(store, "get_finding"):
+            finding = store.get_finding(a.finding_id)
+            if finding is not None:
+                zone_id = finding.zone_id
+        out.append(
+            OpenCapa(
+                action_id=a.action_id,
+                state=a.state,
+                zone_id=zone_id,
+                title=a.title or "",
+            )
+        )
+    return out
+
+
+def _maintenance_orders(app_state) -> list[MaintenanceOrder]:
+    buf = getattr(app_state, "maintenance_orders", None) or []
+    out: list[MaintenanceOrder] = []
+    for item in buf:
+        if isinstance(item, MaintenanceOrder):
+            out.append(item)
+        elif isinstance(item, dict):
+            try:
+                out.append(MaintenanceOrder.model_validate(item))
+            except Exception:
+                continue
+    return out
+
+
+def _zone_adjacency(plant) -> dict[str, set[str]]:
+    adj = plant.adjacency() if hasattr(plant, "adjacency") else {}
+    return {str(k): set(v) for k, v in (adj or {}).items()}
 
 
 def _sensors_and_readings(buf) -> tuple[dict[str, Sensor], dict[str, list[Reading]]]:
@@ -85,6 +152,10 @@ def run_live_fusion(
         v if isinstance(v, VisionDetection) else VisionDetection.model_validate(v)
         for v in vision
     ]
+    workers = _worker_zones(app_state)
+    maintenance = _maintenance_orders(app_state)
+    capas = _open_capas(app_state)
+    adjacency = _zone_adjacency(plant)
     ctx = RiskContext(
         now=now,
         sensors=sensors,
@@ -94,6 +165,10 @@ def run_live_fusion(
         in_changeover=in_changeover,
         voice_events=voice_events,
         vision_detections=vision_dets,
+        maintenance_orders=maintenance,
+        worker_zones=workers,
+        zone_adjacency=adjacency,
+        open_capas=capas,
     )
     findings = evaluate(ctx, load_rules(STARTER_RULES))
     persisted = 0
@@ -111,6 +186,9 @@ def run_live_fusion(
             "permits": len(permits),
             "voiceEvents": len(voice_events),
             "visionDetections": len(vision_dets),
+            "workers": len(workers),
+            "maintenanceOrders": len(maintenance),
+            "openCapas": len(capas),
             "inChangeover": in_changeover,
         },
         "findings": [f.model_dump(by_alias=True, mode="json") for f in findings],

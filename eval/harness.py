@@ -22,6 +22,7 @@ from eval.baselines import (
 from eval.runtime import (
     REPLAYS,
     band_calibrated,
+    compound_catch_stats,
     load_replay,
     run_verge_stream,
 )
@@ -113,10 +114,12 @@ def run_incident(incident: str) -> dict:
     b0_lead = _lead_min(breach, b0)
     b1_lead = _lead_min(breach, b1)
     b2_lead = _lead_min(breach, b2)
+    compound = compound_catch_stats(gt, events, window=window)
 
     return {
         "incident": incident,
         "breachTs": gt["breachTs"],
+        "compound": compound,
         "verge": {
             "alertTs": verge_ts.isoformat() if verge_ts else None,
             "band": verge_band,
@@ -157,6 +160,17 @@ def aggregate_fnr(results: list[dict]) -> dict:
             "fnr": round(misses / total, 3) if total else None,
         }
     return agg
+
+
+def aggregate_compound(results: list[dict]) -> dict:
+    """Compound-only catch rate: multi-kind lineage findings / all Verge findings."""
+    findings = sum(int(r.get("compound", {}).get("findings") or 0) for r in results)
+    compound = sum(int(r.get("compound", {}).get("compound") or 0) for r in results)
+    return {
+        "findings": findings,
+        "compound": compound,
+        "catchRate": round(compound / findings, 3) if findings else None,
+    }
 
 
 def _fmt(v) -> str:
@@ -216,7 +230,21 @@ def render_markdown(results: list[dict]) -> str:
         a = agg[m]
         pct = "—" if a["fnr"] is None else f"{a['fnr'] * 100:.0f}%"
         lines.append(f"| {_METHOD_LABEL[m]} | {a['misses']} | {a['total']} | **{pct}** |")
-    lines.append("")
+    compound = aggregate_compound(results)
+    rate = compound["catchRate"]
+    rate_s = "—" if rate is None else f"{rate * 100:.0f}%"
+    lines += [
+        "",
+        "## Compound-only catch rate (Phase 2)",
+        "",
+        "Share of Verge findings whose contributing signals span ≥2 kinds "
+        "(sensor/permit/voice/vision/…).",
+        "",
+        "| Compound findings | Total findings | Catch rate |",
+        "|-------------------|----------------|------------|",
+        f"| {compound['compound']} | {compound['findings']} | **{rate_s}** |",
+        "",
+    ]
     return "\n".join(lines)
 
 

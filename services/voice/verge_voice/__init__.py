@@ -14,6 +14,7 @@ from .transcribe import (
     speechmatics_status,
     transcribe_audio,
 )
+from .whisper_fallback import WhisperSettings, whisper_status
 
 __all__ = [
     "MELIA_LANGUAGES",
@@ -21,12 +22,14 @@ __all__ = [
     "UNSUPPORTED_PLANT_REQUESTS",
     "SpeechmaticsSettings",
     "VoiceResult",
+    "WhisperSettings",
     "alert_preview",
     "melia_language_catalog",
     "near_miss_from_audio",
     "near_miss_from_transcript",
     "speechmatics_status",
     "transcribe_audio",
+    "whisper_status",
 ]
 
 __version__ = "0.3.0"

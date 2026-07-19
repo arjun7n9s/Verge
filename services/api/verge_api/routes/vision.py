@@ -41,10 +41,26 @@ def _detect_response(
     frame_id: str | None,
     image: bytes | None,
 ) -> dict:
+    from ..frame_store import upload_vision_frame
+
     result = detector.detect(camera_id, frame_id, image)
     signals = to_contributing_signals(result)
     body = result.to_dict()
-    recorded = record_vision_detections(request.app.state, body.get("detections") or [])
+    frame_meta = None
+    if image:
+        frame_meta = upload_vision_frame(image, camera_id=camera_id)
+    detections = list(body.get("detections") or [])
+    if frame_meta and frame_meta.get("uri"):
+        uri = frame_meta["uri"]
+        for d in detections:
+            if isinstance(d, dict) and not d.get("frameUri"):
+                d["frameUri"] = uri
+        body["frameUri"] = uri
+        body["frameUpload"] = {
+            "bucket": frame_meta.get("bucket"),
+            "key": frame_meta.get("key"),
+        }
+    recorded = record_vision_detections(request.app.state, detections)
     return {
         **body,
         "contributingSignals": [s.model_dump(by_alias=True, mode="json") for s in signals],

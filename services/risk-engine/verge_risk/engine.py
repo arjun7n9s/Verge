@@ -8,6 +8,7 @@ RiskFindings with full source lineage.
 from __future__ import annotations
 
 import os
+from datetime import datetime
 
 from verge_forecaster import forecast
 from verge_schema.core import Reading
@@ -35,6 +36,24 @@ def _slope_per_min(readings: list[Reading]) -> float:
 
 # ── predicate implementations ────────────────────────────────────────────────
 # Each returns a ContributingSignal when matched, else None.
+
+
+def _age_seconds(now: datetime, ts: datetime | None) -> float | None:
+    """Seconds between ``now`` and ``ts``; None if either side is unusable.
+
+    SQLite / some APIs return naive timestamps — treat them as UTC so fusion
+    never crashes on tz mismatch (Phase 2 live path).
+    """
+    if ts is None:
+        return None
+    if ts.tzinfo is None and now.tzinfo is not None:
+        ts = ts.replace(tzinfo=now.tzinfo)
+    elif ts.tzinfo is not None and now.tzinfo is None:
+        now = now.replace(tzinfo=ts.tzinfo)
+    try:
+        return (now - ts).total_seconds()
+    except TypeError:
+        return None
 
 
 def _p_permit_active(zv: ZoneView, params: dict) -> ContributingSignal | None:
@@ -133,8 +152,8 @@ def _p_voice_hazard_mention(zv: ZoneView, params: dict) -> ContributingSignal | 
         if not ev.zone_id and zv.zone_id not in (ev.transcript or ""):
             # unzoned events only match if transcript mentions the zone id
             continue
-        age = (zv.ctx.now - ev.ts).total_seconds()
-        if age < 0 or age > max_age_s:
+        age = _age_seconds(zv.ctx.now, ev.ts)
+        if age is None or age < 0 or age > max_age_s:
             continue
         hazards = [h.lower() for h in ev.hazards]
         blob = f"{ev.transcript} {' '.join(hazards)}".lower()
@@ -160,8 +179,8 @@ def _p_vision_detection(zv: ZoneView, params: dict) -> ContributingSignal | None
             continue
         if det.confidence < min_conf:
             continue
-        age = (zv.ctx.now - det.ts).total_seconds()
-        if age < 0 or age > max_age_s:
+        age = _age_seconds(zv.ctx.now, det.ts)
+        if age is None or age < 0 or age > max_age_s:
             continue
         if labels and det.label.lower() not in labels:
             continue
@@ -170,6 +189,49 @@ def _p_vision_detection(zv: ZoneView, params: dict) -> ContributingSignal | None
             ref_id=det.detection_id,
             summary=f"vision {det.label} @ {det.camera_id} ({det.confidence:.2f})",
             ts=det.ts,
+        )
+    return None
+
+
+def _p_adjacent_permit(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    """Match a permit in a twin-adjacent zone (SIMOPS cross-zone)."""
+    kind = params.get("kind")
+    neighbors = zv.ctx.zone_adjacency.get(zv.zone_id) or set()
+    if not neighbors:
+        return None
+    for p in zv.ctx.permits:
+        if p.zone_id not in neighbors:
+            continue
+        if kind and p.kind != kind:
+            continue
+        if not (p.valid_from <= zv.ctx.now <= p.valid_to and p.status == "open"):
+            continue
+        return ContributingSignal(
+            kind="permit",
+            ref_id=p.permit_id,
+            summary=f"{p.kind} permit active in adjacent {p.zone_id}",
+            ts=zv.ctx.now,
+        )
+    return None
+
+
+def _p_open_capa(zv: ZoneView, params: dict) -> ContributingSignal | None:
+    want = set(params.get("states") or ["open", "in-progress", "pending-verification", "reopened"])
+    any_zone = bool(params.get("any_zone", False))
+    for capa in zv.ctx.open_capas:
+        if capa.state not in want:
+            continue
+        if capa.zone_id and capa.zone_id != zv.zone_id and not any_zone:
+            continue
+        if not capa.zone_id and not any_zone:
+            # Plant-wide CAPA without a zone only matches when explicitly allowed.
+            continue
+        return ContributingSignal(
+            kind="capa",
+            ref_id=capa.action_id,
+            summary=f"open CAPA {capa.action_id} ({capa.state})"
+            + (f": {capa.title}" if capa.title else ""),
+            ts=zv.ctx.now,
         )
     return None
 
@@ -183,6 +245,8 @@ PREDICATES = {
     "worker_in_zone": _p_worker_in_zone,
     "voice_hazard_mention": _p_voice_hazard_mention,
     "vision_detection": _p_vision_detection,
+    "adjacent_permit": _p_adjacent_permit,
+    "open_capa": _p_open_capa,
 }
 
 
@@ -193,7 +257,9 @@ def _zone_ids(ctx: RiskContext) -> list[str]:
     zones.update(d.zone_id for d in ctx.vision_detections)
     zones.update(z for z in ctx.worker_zones.values())
     zones.update(m.zone_id for m in ctx.maintenance_orders if m.zone_id)
-    return sorted(zones)
+    zones.update(c.zone_id for c in ctx.open_capas if c.zone_id)
+    zones.update(ctx.zone_adjacency.keys())
+    return sorted(z for z in zones if z)
 
 
 def _graph_incomplete(zone_id: str) -> bool:

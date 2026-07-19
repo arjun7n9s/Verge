@@ -21,7 +21,15 @@ SPEECHMATICS_MODEL=melia-1
 SPEECHMATICS_LANGUAGE=multi
 SPEECHMATICS_LANGUAGE_HINTS=en,hi,ta,ur,bn,mr
 SPEECHMATICS_TRANSLATE_TO_EN=true
+
+# Optional offline fallback (Phase 2C degrade path)
+VERGE_WHISPER_ENABLED=false   # set true + install faster-whisper
+VERGE_WHISPER_MODEL=tiny
 ```
+
+When Speechmatics is missing or fails and Whisper is enabled, `transcribe_audio`
+returns a Faster-Whisper transcript (`provider: faster-whisper`). Otherwise it
+returns silent degraded voice and ops banners tell the operator — risk still runs.
 
 ## Languages
 

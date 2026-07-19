@@ -82,6 +82,29 @@ def test_registry_summary_lists_versions():
     summary = REG.summary()
     assert "reading" in summary["eventTypes"]
     assert summary["contracts"]["reading"] == ["1.0.0"]
+    assert "voice-event" in summary["eventTypes"]
+    assert "vision-detection" in summary["eventTypes"]
+    assert "maintenance" in summary["eventTypes"]
+
+
+def test_voice_and_vision_contracts_pass():
+    voice = {
+        "type": "voice-event",
+        "ts": "2025-01-13T06:44:00+00:00",
+        "transcript": "gas smell B-04",
+        "zoneId": "B-04",
+        "hazards": ["gas"],
+    }
+    vision = {
+        "type": "vision-detection",
+        "ts": "2025-01-13T06:44:00+00:00",
+        "zoneId": "B-04",
+        "cameraId": "CAM-1",
+        "label": "ppe-missing",
+        "confidence": 0.8,
+    }
+    assert REG.validate_event(voice).valid
+    assert REG.validate_event(vision).valid
 
 
 def test_nan_and_inf_readings_are_rejected():

@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -18,6 +19,7 @@ from .languages import (
     filter_hints,
     melia_language_catalog,
 )
+from .whisper_fallback import transcribe_with_whisper, whisper_status
 
 _TRUE = {"1", "true", "yes", "on"}
 
@@ -104,20 +106,23 @@ class SpeechmaticsSettings:
 
 def speechmatics_status(env: dict[str, str] | None = None) -> dict[str, Any]:
     """Config posture for ops/degradation (no network call — key presence only)."""
-    settings = SpeechmaticsSettings.from_env(env or dict(os.environ))
+    env_map = env or dict(os.environ)
+    settings = SpeechmaticsSettings.from_env(env_map)
     reason = settings.missing_reason()
     region = "eu1"
     if "asr.api.speechmatics.com" in settings.base_url:
         with contextlib.suppress(Exception):
             region = settings.base_url.split("//", 1)[1].split(".", 1)[0]
+    whisper = whisper_status(env_map)
     return {
         "configured": reason is None,
-        "degraded": reason is not None,
+        "degraded": reason is not None and not whisper.get("available"),
         "reason": reason,
         "model": settings.model,
         "language": settings.language,
         "region": region,
         "translateToEn": settings.translate_to_en,
+        "whisperFallback": whisper,
     }
 
 
@@ -165,14 +170,64 @@ def _empty_structured() -> dict[str, Any]:
     return {"summary": "", "hazards": [], "zones": [], "actions": []}
 
 
-def _degraded(reason: str, *, model: str | None = None) -> VoiceResult:
+def _degraded(
+    reason: str, *, model: str | None = None, provider: str = "speechmatics"
+) -> VoiceResult:
     return VoiceResult(
         transcript="",
         structured=_empty_structured(),
         degraded=True,
         reason=reason,
         model=model,
+        provider=provider,
     )
+
+
+def _from_whisper_text(
+    text: str,
+    *,
+    provider: LLMProvider | None,
+    model: str | None,
+    speechmatics_reason: str,
+) -> VoiceResult:
+    structured = enrich_structured_with_llm(text, structure_handover(text), provider=provider)
+    return VoiceResult(
+        transcript=text,
+        transcript_original=text,
+        transcript_en=text,
+        structured=structured,
+        degraded=False,
+        reason=f"speechmatics-fallback:{speechmatics_reason}",
+        model=model or "faster-whisper",
+        provider="faster-whisper",
+        translation_source="identity",
+    )
+
+
+def _try_whisper_fallback(
+    audio: bytes,
+    *,
+    filename: str,
+    provider: LLMProvider | None,
+    env: dict[str, str],
+    speechmatics_reason: str,
+    model: str | None,
+    whisper_runner: Any | None = None,
+) -> VoiceResult:
+    text, whisper_reason = transcribe_with_whisper(
+        audio, filename=filename, env=env, runner=whisper_runner
+    )
+    if text:
+        return _from_whisper_text(
+            text, provider=provider, model=model, speechmatics_reason=speechmatics_reason
+        )
+    # Silent voice with banner — risk path still runs without STT.
+    detail = speechmatics_reason
+    if whisper_reason and whisper_reason != "whisper-disabled":
+        detail = f"{speechmatics_reason}; {whisper_reason}"
+    elif whisper_reason == "whisper-disabled":
+        detail = f"{speechmatics_reason}; whisper fallback off"
+    return _degraded(detail, model=model)
 
 
 def _headers(settings: SpeechmaticsSettings) -> dict[str, str]:
@@ -405,13 +460,22 @@ def transcribe_audio(
     env: dict[str, str] | None = None,
     client: httpx.Client | None = None,
     settings: SpeechmaticsSettings | None = None,
+    whisper_runner: Callable[..., str] | None = None,
 ) -> VoiceResult:
     env = env or dict(os.environ)
     settings = settings or SpeechmaticsSettings.from_env(env)
-    if reason := settings.missing_reason():
-        return _degraded(reason, model=settings.model)
     if not audio:
         return _degraded("empty audio upload", model=settings.model)
+    if reason := settings.missing_reason():
+        return _try_whisper_fallback(
+            audio,
+            filename=filename,
+            provider=provider,
+            env=env,
+            speechmatics_reason=reason,
+            model=settings.model,
+            whisper_runner=whisper_runner,
+        )
 
     close_after = False
     http = client
@@ -433,7 +497,15 @@ def transcribe_audio(
         create.raise_for_status()
         job_id = _job_id(create.json())
         if not job_id:
-            return _degraded("speechmatics response missing job id", model=settings.model)
+            return _try_whisper_fallback(
+                audio,
+                filename=filename,
+                provider=provider,
+                env=env,
+                speechmatics_reason="speechmatics response missing job id",
+                model=settings.model,
+                whisper_runner=whisper_runner,
+            )
 
         for _ in range(settings.max_polls):
             detail = http.get(f"/jobs/{job_id}")
@@ -477,16 +549,35 @@ def transcribe_audio(
                     provider=f"speechmatics:{settings.model}",
                 )
             if status in {"rejected", "error", "failed"}:
-                return _degraded(
-                    f"speechmatics job {job_id} {status}", model=settings.model
+                return _try_whisper_fallback(
+                    audio,
+                    filename=filename,
+                    provider=provider,
+                    env=env,
+                    speechmatics_reason=f"speechmatics job {job_id} {status}",
+                    model=settings.model,
+                    whisper_runner=whisper_runner,
                 )
             time.sleep(settings.poll_interval_s)
-        return _degraded(
-            f"speechmatics job {job_id} did not complete before timeout",
+        return _try_whisper_fallback(
+            audio,
+            filename=filename,
+            provider=provider,
+            env=env,
+            speechmatics_reason=f"speechmatics job {job_id} did not complete before timeout",
             model=settings.model,
+            whisper_runner=whisper_runner,
         )
     except Exception as exc:
-        return _degraded(f"speechmatics failed: {type(exc).__name__}", model=settings.model)
+        return _try_whisper_fallback(
+            audio,
+            filename=filename,
+            provider=provider,
+            env=env,
+            speechmatics_reason=f"speechmatics failed: {type(exc).__name__}",
+            model=settings.model,
+            whisper_runner=whisper_runner,
+        )
     finally:
         if close_after:
             http.close()
@@ -498,6 +589,7 @@ __all__ = [
     "VoiceResult",
     "enrich_structured_with_llm",
     "melia_language_catalog",
+    "speechmatics_status",
     "structure_handover",
     "transcribe_audio",
 ]

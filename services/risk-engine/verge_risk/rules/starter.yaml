@@ -478,3 +478,295 @@
       pct: 0.15
   forecast:
     sensor_kind: gas-lel
+
+# ── Phase 2 depth — adjacency / CAPA / multi-sensor packs (target 60+) ──
+
+- id: hot-work-adjacent-confined-space
+  name: Hot work adjacent to confined-space entry
+  severity: critical
+  base_confidence: 0.88
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: adjacent_permit
+      kind: confined-space
+
+- id: confined-space-adjacent-hot-work
+  name: Confined-space entry adjacent to hot work
+  severity: critical
+  base_confidence: 0.88
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: adjacent_permit
+      kind: hot-work
+
+- id: open-capa-rising-lel
+  name: Open CAPA with rising flammable gas
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: open_capa
+      states: [open, in-progress, pending-verification, reopened]
+    - type: sensor_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-lel
+
+- id: open-capa-hot-work
+  name: Open CAPA during hot work
+  severity: warning
+  base_confidence: 0.68
+  all:
+    - type: open_capa
+      states: [open, in-progress, reopened]
+    - type: permit_active
+      kind: hot-work
+
+- id: voice-gas-rising-lel
+  name: Radio gas hazard with rising LEL
+  severity: critical
+  base_confidence: 0.87
+  all:
+    - type: voice_hazard_mention
+      hazards: [gas, lel, smell, flammable]
+      max_age_s: 900
+    - type: sensor_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-lel
+
+- id: vision-intrusion-hot-work
+  name: Zone intrusion during hot work
+  severity: warning
+  base_confidence: 0.74
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: vision_detection
+      labels: [zone-intrusion]
+      min_confidence: 0.4
+      max_age_s: 300
+
+- id: vision-person-confined-space
+  name: Person detected in confined-space permit zone
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: vision_detection
+      labels: [person, zone-intrusion]
+      min_confidence: 0.45
+      max_age_s: 300
+
+- id: worker-in-zone-elevated-co
+  name: Worker present with elevated carbon monoxide
+  severity: critical
+  base_confidence: 0.85
+  all:
+    - type: worker_in_zone
+    - type: sensor_near_threshold
+      sensor_kind: gas-co
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-co
+
+- id: worker-in-zone-h2s
+  name: Worker present with hydrogen sulfide risk
+  severity: critical
+  base_confidence: 0.86
+  all:
+    - type: worker_in_zone
+    - type: sensor_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-h2s
+
+- id: maintenance-open-hot-work
+  name: Open maintenance during hot work
+  severity: warning
+  base_confidence: 0.72
+  all:
+    - type: maintenance_open
+      states: [in-progress, degraded, open]
+    - type: permit_active
+      kind: hot-work
+
+- id: maintenance-open-rising-lel
+  name: Open maintenance with rising flammable gas
+  severity: warning
+  base_confidence: 0.73
+  all:
+    - type: maintenance_open
+      states: [in-progress, degraded, open]
+    - type: sensor_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-lel
+
+- id: pressure-rise-hot-work
+  name: Rising pressure during hot work
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: sensor_near_threshold
+      sensor_kind: pressure
+      pct: 0.15
+      min_rise_per_min: 0.0
+  forecast:
+    sensor_kind: pressure
+
+- id: temperature-rise-hot-work
+  name: Elevated temperature during hot work
+  severity: warning
+  base_confidence: 0.68
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: sensor_near_threshold
+      sensor_kind: temperature
+      pct: 0.15
+  forecast:
+    sensor_kind: temperature
+
+- id: wind-shift-toxic-release
+  name: Wind shift with toxic gas near threshold
+  severity: warning
+  base_confidence: 0.66
+  all:
+    - type: sensor_near_threshold
+      sensor_kind: wind
+      pct: 0.25
+      min_rise_per_min: 0.0
+    - type: sensor_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.25
+  forecast:
+    sensor_kind: gas-h2s
+
+- id: level-high-confined-space
+  name: High level during confined-space entry
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: sensor_near_threshold
+      sensor_kind: level
+      pct: 0.15
+  forecast:
+    sensor_kind: level
+
+- id: o2-depletion-confined-space
+  name: Oxygen depletion in confined space
+  severity: critical
+  base_confidence: 0.9
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: sensor_near_threshold
+      sensor_kind: gas-o2
+      pct: 0.10
+  forecast:
+    sensor_kind: gas-o2
+
+- id: vibration-worker-present
+  name: Elevated vibration with worker in zone
+  severity: warning
+  base_confidence: 0.7
+  all:
+    - type: worker_in_zone
+    - type: sensor_near_threshold
+      sensor_kind: vibration
+      pct: 0.20
+  forecast:
+    sensor_kind: vibration
+
+- id: voice-hot-work-mention
+  name: Radio hot-work hazard mention with active permit
+  severity: warning
+  base_confidence: 0.75
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: voice_hazard_mention
+      hazards: [hot-work, welding, cutting, fire]
+      max_age_s: 900
+
+- id: voice-confined-space-mention
+  name: Radio confined-space hazard with active permit
+  severity: warning
+  base_confidence: 0.76
+  all:
+    - type: permit_active
+      kind: confined-space
+    - type: voice_hazard_mention
+      hazards: [confined-space, vessel entry, entry]
+      max_age_s: 900
+
+- id: adjacent-hot-work-rising-lel
+  name: Adjacent hot work with rising LEL
+  severity: critical
+  base_confidence: 0.84
+  all:
+    - type: adjacent_permit
+      kind: hot-work
+    - type: sensor_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.15
+  forecast:
+    sensor_kind: gas-lel
+
+- id: vision-ppe-worker-present
+  name: PPE gap with worker in zone
+  severity: warning
+  base_confidence: 0.72
+  all:
+    - type: worker_in_zone
+    - type: vision_detection
+      labels: [ppe-missing, no-hardhat, no-ppe]
+      min_confidence: 0.45
+      max_age_s: 300
+
+- id: open-capa-vision-ppe
+  name: Open CAPA with vision PPE gap
+  severity: warning
+  base_confidence: 0.65
+  all:
+    - type: open_capa
+      states: [open, in-progress, reopened]
+    - type: vision_detection
+      labels: [ppe-missing]
+      min_confidence: 0.45
+      max_age_s: 300
+
+- id: changeover-voice-gas
+  name: Shift changeover with radio gas hazard
+  severity: critical
+  base_confidence: 0.82
+  all:
+    - type: shift_changeover
+    - type: voice_hazard_mention
+      hazards: [gas, lel, smell]
+      max_age_s: 900
+
+- id: toxic-o2-multi-gas
+  name: Toxic and oxygen sensor convergence
+  severity: critical
+  base_confidence: 0.88
+  all:
+    - type: sensor_near_threshold
+      sensor_kind: gas-h2s
+      pct: 0.25
+    - type: sensor_near_threshold
+      sensor_kind: gas-o2
+      pct: 0.20
+  forecast:
+    sensor_kind: gas-h2s
