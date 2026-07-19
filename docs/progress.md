@@ -1,5 +1,21 @@
 # Dex Progress Log
 
+## 2026-07-20 — Live Ops stage + Ash IA handoff
+
+### Done
+- Board: persistent Live Ops stage (vision still + radio rail; never hide when quiet)
+- Band-first triage default; columns as toggle; PanelSystem removed
+- Finding page Live section (telemetry, permits, zone frame, radio)
+- Vision frame HTTP cache (`GET /api/vision/frames/{id}`)
+- Ash IA: `/findings/:id`, `/graph`, Copilot thread — committed with Live Ops
+- CI green on `e925c90`
+
+### Next
+- Real RTSP → frames in demos; optional live audio later
+- Ash craft polish against Live Ops composition
+
+---
+
 ## 2026-07-19 — Phase 3 Specialist Agents closed in depth
 
 ### Done
