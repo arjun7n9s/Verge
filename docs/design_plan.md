@@ -98,7 +98,7 @@ Support
 
 **Mood:** Ops room first, triage second — industrial situation awareness without a mega-dashboard.
 
-- **Live Ops stage (mandatory):** always-visible vision still + radio transcript rail on `/`. Honest empty labels when quiet — never hide the whole stage. Frames from real `detect-frame` ingest (`/api/vision/frames/{id}`); no invented cameras.
+- **Live Ops stage (mandatory):** multi-cam wall (MJPEG/snapshot from registry `source` / `VERGE_VISION_RTSP_URL`) + radio transcript rail with optional clip playback on `/`. Honest empty labels when quiet — never hide the whole stage. Detection stills from `detect-frame` (`/api/vision/frames/{id}`); demo sources are labeled DEMO, never invented plant CCTV.
 - **Triage:** band-first finding list by default (IMMINENT → NEAR → WATCH); column kanban available as a toggle.
 - Optional Map / Response side rails — closed by default; never permanent equal panels.
 - Click finding → **`/findings/:id`** (full page). Prefer page over kitchen-sink modal.
@@ -111,7 +111,7 @@ Support
 Sequential, readable sections (tabs or ruled blocks):
 
 1. **Summary** — band, zone, title, counterfactual  
-2. **Live** — zone camera still, radio, telemetry window, active permits  
+2. **Live** — zone live cam (or last still), radio + audio clips, synced incident timeline (vision/radio/sensors), telemetry window, active permits  
 3. **Signals** — lineage chips + convergence chart  
 4. **Investigate** — orchestrator brief, specialists, validator disposition  
 5. **Ask** — deep-link to Copilot scoped to this finding (`/knowledge?finding=…`)  
@@ -230,6 +230,7 @@ Independent of backend phase numbers; coordinate APIs as needed.
 | 2026-07-19 | Initial `design_plan.md`: one job per page; Plant Copilot; no mega-dashboard; no fiction |
 | 2026-07-20 | Added §13 Premium craft escalation (backed by [`design-resources/`](./design-resources/README.md)); Ash IA handoff (finding page, graph, Copilot thread) — U2–U6 partial, not complete |
 | 2026-07-20 | §6.1 Live Ops stage mandatory; band-first triage default; finding **Live** section; vision frame HTTP cache |
+| 2026-07-20 | §6.1 multi-cam MJPEG wall + radio audio clips; §6.2 incident timeline scrubber; `/api/cameras`, `/api/voice/clips` |
 
 ---
 

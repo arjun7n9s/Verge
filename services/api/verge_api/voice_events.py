@@ -64,6 +64,7 @@ class VoiceEventBuffer:
                 hazards=list(hazards),
                 equipment_ids=list(equipment),
                 source=row.get("source") or "radio",
+                audio_clip_uri=None,
             )
             self.events.append(ev)
         if len(self.events) > self._max:
@@ -108,6 +109,7 @@ class VoiceEventBuffer:
         ts: datetime | None = None,
         transcript_original: str | None = None,
         languages_detected: list[str] | None = None,
+        audio_clip_uri: str | None = None,
     ) -> VoiceEvent:
         structured = structured or {}
         hazards = [str(h).lower() for h in (structured.get("hazards") or [])]
@@ -130,6 +132,7 @@ class VoiceEventBuffer:
             hazards=hazards,
             equipment_ids=[str(x) for x in (structured.get("equipment") or [])],
             source=source,
+            audio_clip_uri=audio_clip_uri,
         )
         self.events.append(ev)
         del self.events[: -self._max]
@@ -176,6 +179,7 @@ def record_voice_event(
     ts: datetime | None = None,
     transcript_original: str | None = None,
     languages_detected: list[str] | None = None,
+    audio_clip_uri: str | None = None,
 ) -> VoiceEvent:
     buf = _buffer(app_state)
     # Keep app.state.voice_events pointing at the same list fusion reads.
@@ -188,10 +192,22 @@ def record_voice_event(
         ts=ts,
         transcript_original=transcript_original,
         languages_detected=languages_detected,
+        audio_clip_uri=audio_clip_uri,
     )
 
 
 def list_voice_events(app_state, *, limit: int = 50) -> list[VoiceEvent]:
+    from .audio_clip_cache import clip_uri_if_present
+
     buf = _buffer(app_state)
     app_state.voice_events = buf.events
-    return buf.list_recent(limit=limit)
+    events = buf.list_recent(limit=limit)
+    # Attach clip URI when bytes are still in the rolling cache (P4 — no invent).
+    out: list[VoiceEvent] = []
+    for ev in events:
+        uri = ev.audio_clip_uri or clip_uri_if_present(app_state, ev.event_id)
+        if uri and uri != ev.audio_clip_uri:
+            out.append(ev.model_copy(update={"audio_clip_uri": uri}))
+        else:
+            out.append(ev)
+    return out

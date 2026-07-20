@@ -1,4 +1,4 @@
-/** Live Ops feeds — voice, vision (with frameUri), lessons. Honest empties. */
+/** Live Ops feeds — voice, vision, cameras, lessons. Honest empties. */
 
 export interface VoiceEventRow {
   eventId: string;
@@ -7,6 +7,8 @@ export interface VoiceEventRow {
   zoneId?: string | null;
   hazards?: string[];
   source?: string;
+  /** Browser path when raw radio audio was retained. */
+  audioClipUri?: string | null;
 }
 
 export interface VisionDetectionRow {
@@ -18,6 +20,16 @@ export interface VisionDetectionRow {
   confidence: number;
   /** Browser path `/api/vision/frames/…` or s3:// when only storage exists. */
   frameUri?: string | null;
+}
+
+export interface CameraRow {
+  cameraId: string;
+  zoneId: string;
+  restricted: boolean;
+  hasSource: boolean;
+  sourceKind: string;
+  streamPath?: string | null;
+  snapshotPath?: string | null;
 }
 
 export interface LessonCardRow {
@@ -37,6 +49,10 @@ export function displayableFrameSrc(uri: string | null | undefined): string | nu
   return isHttpFrame(uri) ? uri! : null;
 }
 
+export function displayableAudioSrc(uri: string | null | undefined): string | null {
+  return isHttpFrame(uri) ? uri! : null;
+}
+
 export async function fetchVoiceEvents(limit = 12): Promise<VoiceEventRow[]> {
   const res = await fetch(`/api/voice/events?limit=${limit}`);
   if (!res.ok) throw new Error(`voice ${res.status}`);
@@ -49,6 +65,13 @@ export async function fetchVisionEvents(limit = 12): Promise<VisionDetectionRow[
   if (!res.ok) throw new Error(`vision ${res.status}`);
   const body = (await res.json()) as { detections?: VisionDetectionRow[] };
   return body.detections ?? [];
+}
+
+export async function fetchCameras(): Promise<CameraRow[]> {
+  const res = await fetch('/api/cameras');
+  if (!res.ok) throw new Error(`cameras ${res.status}`);
+  const body = (await res.json()) as { cameras?: CameraRow[] };
+  return body.cameras ?? [];
 }
 
 export async function fetchProactiveLessons(zoneId: string): Promise<LessonCardRow[]> {

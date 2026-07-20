@@ -1,18 +1,21 @@
 /**
  * Live Ops stage — persistent Board presence (design_plan §6.1).
- * Vision still + radio transcript rail. Never returns null; empty is labeled.
+ * Multi-cam wall + radio with optional clip playback. Never returns null.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, Camera, BookMarked } from 'lucide-react';
+import { Radio, Camera, BookMarked, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { useFindingsStore } from '@/stores/findings';
 import { BAND_SEVERITY } from '@/types';
 import {
+  displayableAudioSrc,
   displayableFrameSrc,
+  fetchCameras,
   fetchProactiveLessons,
   fetchVisionEvents,
   fetchVoiceEvents,
+  type CameraRow,
   type LessonCardRow,
   type VisionDetectionRow,
   type VoiceEventRow,
@@ -20,6 +23,8 @@ import {
 import clsx from 'clsx';
 
 const RADIO_ROLES = new Set(['Safety_Engineer', 'administrator']);
+
+type ViewMode = 'wall' | 'focus';
 
 export function LiveOpsStage({ className }: { className?: string }) {
   const user = useAuthStore((s) => s.user);
@@ -38,9 +43,13 @@ export function LiveOpsStage({ className }: { className?: string }) {
 
   const [radio, setRadio] = useState<VoiceEventRow[]>([]);
   const [vision, setVision] = useState<VisionDetectionRow[]>([]);
+  const [cameras, setCameras] = useState<CameraRow[]>([]);
   const [lesson, setLesson] = useState<LessonCardRow | null>(null);
   const [voiceErr, setVoiceErr] = useState<string | null>(null);
-  const [visionErr, setVisionErr] = useState<string | null>(null);
+  const [camErr, setCamErr] = useState<string | null>(null);
+  const [selectedCam, setSelectedCam] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('wall');
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,15 +73,24 @@ export function LiveOpsStage({ className }: { className?: string }) {
       }
 
       try {
-        const dets = await fetchVisionEvents(10);
+        const [dets, cams] = await Promise.all([fetchVisionEvents(10), fetchCameras()]);
         if (!cancelled) {
           setVision(dets);
-          setVisionErr(null);
+          setCameras(cams);
+          setCamErr(null);
+          setSelectedCam((prev) => {
+            if (prev && cams.some((c) => c.cameraId === prev)) return prev;
+            const zoneMatch = focusZone
+              ? cams.find((c) => c.zoneId === focusZone && c.hasSource)
+              : undefined;
+            return (zoneMatch ?? cams.find((c) => c.hasSource) ?? cams[0])?.cameraId ?? null;
+          });
         }
       } catch {
         if (!cancelled) {
           setVision([]);
-          setVisionErr('vision feed offline');
+          setCameras([]);
+          setCamErr('camera feed offline');
         }
       }
 
@@ -88,16 +106,28 @@ export function LiveOpsStage({ className }: { className?: string }) {
       }
     };
     void load();
-    const id = setInterval(() => void load(), 5000);
+    const id = setInterval(() => void load(), 8000);
     return () => {
       cancelled = true;
       clearInterval(id);
     };
   }, [radioAllowed, focusZone]);
 
+  const liveCams = cameras.filter((c) => c.hasSource);
+  const focusCam =
+    liveCams.find((c) => c.cameraId === selectedCam) ??
+    liveCams.find((c) => c.zoneId === focusZone) ??
+    liveCams[0] ??
+    null;
+
   const latestWithFrame = vision.find((v) => displayableFrameSrc(v.frameUri));
-  const latestVision = latestWithFrame ?? vision[0] ?? null;
-  const frameSrc = displayableFrameSrc(latestVision?.frameUri);
+  const detectionOverlay =
+    (focusCam &&
+      vision.find(
+        (v) => v.cameraId === focusCam.cameraId && displayableFrameSrc(v.frameUri),
+      )) ??
+    latestWithFrame ??
+    null;
 
   return (
     <section
@@ -105,15 +135,15 @@ export function LiveOpsStage({ className }: { className?: string }) {
         'border border-line rounded-md bg-panel overflow-hidden shrink-0 flex flex-col',
         className,
       )}
-      aria-label="Live Ops — radio and vision"
+      aria-label="Live Ops — cameras and radio"
     >
       <div className="h-8 px-3 border-b border-line flex items-center justify-between gap-3">
         <span className="text-micro font-mono uppercase tracking-[0.12em] text-ink-dim">
           Live Ops
         </span>
         <div className="flex items-center gap-3 text-micro font-mono text-ink-dim tabular-nums">
+          <span>Cams · {liveCams.length || cameras.length}</span>
           <span>Radio · {radioAllowed ? radio.length : '—'}</span>
-          <span>Vision · {vision.length}</span>
           {lesson && (
             <span className="text-watch truncate max-w-[160px]" title={lesson.title}>
               Lesson · {lesson.lessonId}
@@ -122,49 +152,137 @@ export function LiveOpsStage({ className }: { className?: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] min-h-[168px] max-h-[220px]">
-        {/* Vision pane */}
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] min-h-[200px] max-h-[280px]">
+        {/* Camera wall / focus */}
         <div className="border-b md:border-b-0 md:border-r border-line flex flex-col min-h-0 bg-bg/40">
-          <div className="px-3 py-1.5 flex items-center gap-1.5 text-micro font-mono uppercase tracking-[0.08em] text-ink-dim shrink-0">
+          <div className="px-3 py-1.5 flex items-center gap-2 text-micro font-mono uppercase tracking-[0.08em] text-ink-dim shrink-0">
             <Camera className="h-3 w-3" />
-            Vision
-            {latestVision && (
-              <span className="normal-case tracking-normal text-ink-dim/80 ml-1 truncate">
-                {latestVision.cameraId} · {latestVision.zoneId || '—'} · {latestVision.label}
-              </span>
-            )}
+            Cameras
+            <div className="ml-auto flex items-center gap-1 normal-case tracking-normal">
+              <button
+                type="button"
+                onClick={() => setViewMode('wall')}
+                className={clsx(
+                  'px-1.5 py-0.5 rounded-sm border text-micro',
+                  viewMode === 'wall'
+                    ? 'border-ink/30 text-ink bg-bg'
+                    : 'border-transparent text-ink-dim hover:text-ink',
+                )}
+                title="Multi-cam wall"
+              >
+                <LayoutGrid className="h-3 w-3 inline mr-0.5" />
+                Wall
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('focus')}
+                className={clsx(
+                  'px-1.5 py-0.5 rounded-sm border text-micro',
+                  viewMode === 'focus'
+                    ? 'border-ink/30 text-ink bg-bg'
+                    : 'border-transparent text-ink-dim hover:text-ink',
+                )}
+              >
+                Focus
+              </button>
+            </div>
           </div>
-          <div className="flex-1 min-h-0 flex items-center justify-center p-2 relative">
-            {visionErr ? (
-              <span className="text-xs text-ink-dim font-mono px-3 text-center">{visionErr}</span>
-            ) : frameSrc ? (
-              <img
-                src={frameSrc}
-                alt={`Detection ${latestVision?.label ?? ''} on ${latestVision?.cameraId ?? ''}`}
-                className="max-h-full max-w-full object-contain border border-line bg-ink/5"
-              />
-            ) : latestVision ? (
-              <div className="flex flex-col items-center gap-1 px-4 text-center">
-                <span className="text-xs text-ink font-medium">
-                  {latestVision.label}
-                  <span className="font-mono text-ink-dim ml-1.5">
-                    {(latestVision.confidence * 100).toFixed(0)}%
-                  </span>
-                </span>
-                <span className="text-micro font-mono text-ink-dim">
-                  {latestVision.frameUri?.startsWith('s3://')
-                    ? 'Frame in object store — no browser preview path'
-                    : 'No frame still for this detection'}
-                </span>
+
+          {cameras.length > 0 && (
+            <div className="px-2 pb-1 flex flex-wrap gap-1 shrink-0">
+              {cameras.map((c) => (
+                <button
+                  key={c.cameraId}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCam(c.cameraId);
+                    setViewMode('focus');
+                  }}
+                  className={clsx(
+                    'px-1.5 py-0.5 text-micro font-mono rounded-sm border transition-colors',
+                    selectedCam === c.cameraId
+                      ? 'border-ink/40 text-ink bg-bg'
+                      : 'border-line text-ink-dim hover:text-ink',
+                    !c.hasSource && 'opacity-50',
+                  )}
+                >
+                  {c.cameraId}
+                  <span className="text-ink-dim/70 ml-1">{c.zoneId}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex-1 min-h-0 p-2">
+            {camErr ? (
+              <div className="h-full flex items-center justify-center">
+                <span className="text-xs text-ink-dim font-mono px-3 text-center">{camErr}</span>
               </div>
-            ) : (
-              <div className="flex flex-col items-center gap-1 px-4 text-center">
-                <span className="text-xs text-ink-dim">No recent vision events</span>
+            ) : liveCams.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center gap-1 px-4 text-center">
+                <span className="text-xs text-ink-dim">No camera sources configured</span>
                 <span className="text-micro font-mono text-ink-dim/70">
-                  Frames appear after detect-frame ingest
+                  Set registry source or VERGE_VISION_RTSP_URL
                 </span>
+                {detectionOverlay && displayableFrameSrc(detectionOverlay.frameUri) && (
+                  <img
+                    src={displayableFrameSrc(detectionOverlay.frameUri)!}
+                    alt="Last detection still"
+                    className="mt-2 max-h-24 border border-line object-contain"
+                  />
+                )}
               </div>
-            )}
+            ) : viewMode === 'wall' ? (
+              <div
+                className={clsx(
+                  'h-full grid gap-1.5',
+                  liveCams.length === 1 && 'grid-cols-1',
+                  liveCams.length === 2 && 'grid-cols-2',
+                  liveCams.length >= 3 && 'grid-cols-2',
+                )}
+              >
+                {liveCams.slice(0, 4).map((c) => (
+                  <button
+                    key={c.cameraId}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCam(c.cameraId);
+                      setViewMode('focus');
+                    }}
+                    className="relative border border-line bg-ink/5 overflow-hidden min-h-[72px] group"
+                  >
+                    <img
+                      src={c.streamPath || c.snapshotPath || ''}
+                      alt={`${c.cameraId} live`}
+                      className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100"
+                    />
+                    <span className="absolute bottom-0 inset-x-0 px-1.5 py-0.5 bg-ink/70 text-micro font-mono text-panel truncate text-left">
+                      {c.cameraId} · {c.zoneId}
+                      {c.sourceKind === 'demo' ? ' · DEMO' : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : focusCam ? (
+              <div className="h-full relative border border-line bg-ink/5 overflow-hidden">
+                <img
+                  src={focusCam.streamPath || focusCam.snapshotPath || ''}
+                  alt={`${focusCam.cameraId} live stream`}
+                  className="absolute inset-0 w-full h-full object-contain"
+                />
+                <div className="absolute top-1 left-1 right-1 flex justify-between gap-2 pointer-events-none">
+                  <span className="px-1.5 py-0.5 bg-ink/70 text-micro font-mono text-panel">
+                    {focusCam.cameraId} · {focusCam.zoneId}
+                    {focusCam.sourceKind === 'demo' ? ' · DEMO' : ' · LIVE'}
+                  </span>
+                  {detectionOverlay && (
+                    <span className="px-1.5 py-0.5 bg-ink/70 text-micro font-mono text-panel truncate">
+                      Last detect · {detectionOverlay.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -183,26 +301,48 @@ export function LiveOpsStage({ className }: { className?: string }) {
               <div className="flex flex-col gap-1 py-2">
                 <span className="text-xs text-ink-dim">No recent radio events</span>
                 <span className="text-micro font-mono text-ink-dim/70">
-                  Transcripts stream here when voice events arrive
+                  Transcripts + clips appear when voice events arrive
                 </span>
               </div>
             ) : (
               <ul className="flex flex-col gap-2 py-1">
-                {radio.slice(0, 6).map((ev) => (
-                  <li key={ev.eventId} className="text-xs leading-snug border-b border-line/50 pb-1.5 last:border-0">
-                    <span className="font-mono text-ink-dim mr-1.5">
-                      {ev.zoneId || '—'}
-                    </span>
-                    <span className="text-ink">{ev.transcript || '(empty transcript)'}</span>
-                  </li>
-                ))}
+                {radio.slice(0, 6).map((ev) => {
+                  const audioSrc = displayableAudioSrc(ev.audioClipUri);
+                  return (
+                    <li
+                      key={ev.eventId}
+                      className="text-xs leading-snug border-b border-line/50 pb-1.5 last:border-0"
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="font-mono text-ink-dim shrink-0">
+                          {ev.zoneId || '—'}
+                        </span>
+                        <span className="text-ink flex-1 min-w-0">
+                          {ev.transcript || '(empty transcript)'}
+                        </span>
+                      </div>
+                      {audioSrc && (
+                        <audio
+                          controls
+                          preload="none"
+                          src={audioSrc}
+                          className="mt-1 w-full h-7"
+                          onPlay={() => setPlayingId(ev.eventId)}
+                          onPause={() =>
+                            setPlayingId((id) => (id === ev.eventId ? null : id))
+                          }
+                          data-playing={playingId === ev.eventId ? '1' : '0'}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
         </div>
       </div>
 
-      {/* Footer chips — deep-link when a focus finding exists */}
       <div className="h-7 px-3 border-t border-line flex items-center gap-3 text-micro font-mono text-ink-dim bg-panel-2/40">
         {focusFinding ? (
           <Link

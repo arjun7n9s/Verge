@@ -19,6 +19,8 @@ class VoiceEvent(VergeModel):
     hazards: list[str] = Field(default_factory=list)
     equipment_ids: list[str] = Field(default_factory=list)
     source: str = "radio"  # radio | handover | near-miss | manual | transcribe
+    # Browser path when raw audio was retained (e.g. /api/voice/clips/{id})
+    audio_clip_uri: str | None = None
 
 
 class VisionDetection(VergeModel):

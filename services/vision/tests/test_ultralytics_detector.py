@@ -231,8 +231,8 @@ def test_load_camera_registry_bundled_demo():
     from verge_vision.cameras import DEMO_CAMERAS
 
     reg = load_camera_registry(DEMO_CAMERAS)
-    assert reg["CAM-B04"] == CameraZone(zone_id="B-04", restricted=False)
-    assert reg["CAM-B05"] == CameraZone(zone_id="B-05", restricted=True)
+    assert reg["CAM-B04"] == CameraZone(zone_id="B-04", restricted=False, source="demo")
+    assert reg["CAM-B05"] == CameraZone(zone_id="B-05", restricted=True, source="demo")
 
 
 def test_load_camera_registry_drops_malformed_entries_not_raises():

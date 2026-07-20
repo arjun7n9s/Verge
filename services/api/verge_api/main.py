@@ -44,6 +44,7 @@ from .ops import ops_snapshot, render_prometheus
 from .redpanda_fanout import start_redpanda_fanout
 from .routes.actions import router as actions_router
 from .routes.alerts import router as alerts_router
+from .routes.cameras import router as cameras_router
 from .routes.commission import router as commission_router
 from .routes.compliance import router as compliance_router
 from .routes.contracts import router as contracts_router
@@ -174,6 +175,7 @@ app.include_router(actions_router, prefix="/api")
 app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
+app.include_router(cameras_router, prefix="/api")
 app.include_router(fusion_router, prefix="/api")
 app.include_router(models_router, prefix="/api")
 app.include_router(ops_router, prefix="/api")

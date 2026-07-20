@@ -17,6 +17,9 @@ from verge_voice import (
     transcribe_audio,
 )
 
+from fastapi.responses import Response
+
+from ..audio_clip_cache import get_clip, store_clip
 from ..hooks import maybe_ingest_near_miss, maybe_ingest_voice_ops
 from ..voice_events import list_voice_events, record_voice_event
 
@@ -44,6 +47,37 @@ def _english_ops(result) -> str:
     if isinstance(result, dict):
         return result.get("transcriptEn") or result.get("transcript") or ""
     return ""
+
+
+def _guess_audio_type(filename: str | None, content_type: str | None) -> str:
+    ct = (content_type or "").split(";")[0].strip().lower()
+    if ct.startswith("audio/") or ct in {"application/octet-stream", "application/ogg"}:
+        if ct and ct != "application/octet-stream":
+            return ct
+    name = (filename or "").lower()
+    if name.endswith(".wav"):
+        return "audio/wav"
+    if name.endswith(".mp3"):
+        return "audio/mpeg"
+    if name.endswith(".ogg"):
+        return "audio/ogg"
+    if name.endswith(".webm"):
+        return "audio/webm"
+    if name.endswith(".m4a"):
+        return "audio/mp4"
+    return "audio/wav"
+
+
+def _attach_clip(app_state, ev, audio: bytes, *, filename: str | None, content_type: str | None):
+    uri = store_clip(
+        app_state,
+        ev.event_id,
+        audio,
+        content_type=_guess_audio_type(filename, content_type),
+    )
+    if uri:
+        ev.audio_clip_uri = uri
+    return ev
 
 
 def _record_from_voice_result(app_state, result, *, source: str, zone_id: str | None = None):
@@ -122,7 +156,15 @@ async def voice_transcribe(request: Request, file: UploadFile = VOICE_FILE) -> d
     body = result.to_dict()
     if not result.degraded and _english_ops(result).strip():
         ev = _record_from_voice_result(request.app.state, result, source="transcribe")
+        _attach_clip(
+            request.app.state,
+            ev,
+            audio,
+            filename=file.filename,
+            content_type=file.content_type,
+        )
         body["voiceEventId"] = ev.event_id
+        body["audioClipUri"] = ev.audio_clip_uri
         body["cognee"] = maybe_ingest_voice_ops(
             _english_ops(result),
             structured=result.structured,
@@ -170,7 +212,15 @@ async def voice_handover(
     body["auditAppended"] = True
     if not result.degraded and english.strip():
         ev = _record_from_voice_result(request.app.state, result, source="handover")
+        _attach_clip(
+            request.app.state,
+            ev,
+            audio,
+            filename=file.filename,
+            content_type=file.content_type,
+        )
         body["voiceEventId"] = ev.event_id
+        body["audioClipUri"] = ev.audio_clip_uri
         body["cognee"] = maybe_ingest_voice_ops(
             english, structured=result.structured, source="handover"
         )
@@ -245,7 +295,15 @@ async def voice_near_miss(
             transcript_original=body.get("transcriptOriginal"),
             languages_detected=body.get("languagesDetected") or [],
         )
+        _attach_clip(
+            request.app.state,
+            ev,
+            audio,
+            filename=file.filename,
+            content_type=file.content_type,
+        )
         body["voiceEventId"] = ev.event_id
+        body["audioClipUri"] = ev.audio_clip_uri
         body["cognee"] = cognee
         body["fusion"] = _maybe_fuse_after_voice(
             request.app.state, structured=structured
@@ -290,6 +348,21 @@ def voice_events_recent(request: Request, limit: int = 50) -> dict:
         "events": [e.model_dump(by_alias=True, mode="json") for e in events],
         "count": len(events),
     }
+
+
+@router.get("/voice/clips/{event_id}")
+def voice_clip_bytes(event_id: str, request: Request) -> Response:
+    hit = get_clip(request.app.state, event_id)
+    if hit is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(404, "audio clip not in cache")
+    data, content_type = hit
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": "no-store", "X-Verge-Voice-Event": event_id},
+    )
 
 
 @router.post("/findings/{finding_id}/alert/preview")

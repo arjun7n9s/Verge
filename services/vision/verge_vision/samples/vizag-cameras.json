@@ -1,4 +1,4 @@
 {
-  "CAM-B04": { "zoneId": "B-04", "restricted": false },
-  "CAM-B05": { "zoneId": "B-05", "restricted": true }
+  "CAM-B04": { "zoneId": "B-04", "restricted": false, "source": "demo" },
+  "CAM-B05": { "zoneId": "B-05", "restricted": true, "source": "demo" }
 }
