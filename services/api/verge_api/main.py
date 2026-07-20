@@ -72,6 +72,7 @@ from .routes.reports import router as reports_router
 from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
+from .routes.watch import router as watch_router
 from .routes.workers import router as workers_router
 from .seed import seed
 from .state_factory import (
@@ -84,6 +85,7 @@ from .stream_notify import drain_outbox
 from .trace import current_trace_id, record_trace
 from .trace_index import TraceIndex
 from .trace_middleware import TraceMiddleware
+from .watch_loop import controller as watch_controller
 
 
 def _load_model_registry() -> ModelRegistry:
@@ -122,7 +124,22 @@ async def _lifespan(app: FastAPI):
 
     outbox_task = asyncio.create_task(_outbox_loop())
     anchor_task = asyncio.create_task(_anchor_loop())
+
+    # Continuous multi-source WatchLoop (opt-in via env or POST /api/watch/start).
+    watch_controller.bind_app(app)
+    watch_controller.configure_from_env()
+    if os.environ.get("VERGE_WATCH_ENABLED", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        watch_controller.start()
+
     yield
+    if watch_controller.status.running:
+        with contextlib.suppress(Exception):
+            watch_controller.stop()
     outbox_task.cancel()
     anchor_task.cancel()
     if stop is not None:
@@ -176,6 +193,7 @@ app.include_router(memory_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(vision_router, prefix="/api")
 app.include_router(cameras_router, prefix="/api")
+app.include_router(watch_router, prefix="/api")
 app.include_router(fusion_router, prefix="/api")
 app.include_router(models_router, prefix="/api")
 app.include_router(ops_router, prefix="/api")

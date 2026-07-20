@@ -36,8 +36,8 @@ class VisionEventBody(BaseModel):
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
 
 
-def _detect_response(
-    request: Request,
+def run_detect(
+    app_state,
     detector,
     camera_id: str,
     frame_id: str | None,
@@ -45,6 +45,7 @@ def _detect_response(
     *,
     zone_id: str | None = None,
 ) -> dict:
+    """Shared detect path for HTTP routes and the continuous WatchLoop."""
     from ..frame_store import upload_vision_frame
 
     result = detector.detect(camera_id, frame_id, image)
@@ -70,17 +71,17 @@ def _detect_response(
             "key": frame_meta.get("key"),
             "storageUri": s3_uri,
         }
-    recorded = record_vision_detections(request.app.state, detections)
+    recorded = record_vision_detections(app_state, detections)
     # Prefer browser-fetchable paths over s3:// for console Live Ops stage.
     browser_uri = None
     if image and recorded:
         for ev in recorded:
-            path = store_frame(request.app.state, ev.detection_id, image)
+            path = store_frame(app_state, ev.detection_id, image)
             if path:
                 ev.frame_uri = path
                 browser_uri = path
         # Keep fusion buffer in sync with rewritten URIs.
-        buf = getattr(request.app.state, "vision_detections", None) or []
+        buf = getattr(app_state, "vision_detections", None) or []
         by_id = {e.detection_id: e for e in recorded}
         for i, existing in enumerate(buf):
             if existing.detection_id in by_id:
@@ -102,8 +103,8 @@ def _detect_response(
 @router.post("/vision/detect")
 def detect(body: DetectBody, request: Request) -> dict:
     """Annotation-replay / metadata-only detection (no real frame required)."""
-    return _detect_response(
-        request, request.app.state.vision, body.cameraId, body.frameId, None
+    return run_detect(
+        request.app.state, request.app.state.vision, body.cameraId, body.frameId, None
     )
 
 
@@ -119,8 +120,8 @@ async def detect_frame(
     routed demo clip (``verge vision watch``) reaches the vision plane; the
     stub/annotation backends still degrade or replay exactly as before."""
     image = await file.read()
-    return _detect_response(
-        request,
+    return run_detect(
+        request.app.state,
         request.app.state.vision,
         cameraId,
         None,

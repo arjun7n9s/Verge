@@ -6,7 +6,13 @@ import os
 
 from verge_memory.client import CogneeClient, cognee_enabled_from_env
 from verge_memory.datasets import dataset_name
-from verge_memory.ingest import ingest_and_cognify, ingest_closed_finding, ingest_feedback
+from verge_memory.ingest import (
+    ingest_and_cognify,
+    ingest_closed_finding,
+    ingest_feedback,
+    ingest_open_finding,
+    ingest_vision_watch,
+)
 from verge_schema.enums import FindingState as S
 from verge_schema.findings import RiskFinding
 
@@ -111,3 +117,60 @@ def maybe_ingest_voice_ops(
     return maybe_ingest_near_miss(
         transcript, structured=structured, finding_id=finding_id
     )
+
+
+def maybe_ingest_open_finding(finding: RiskFinding) -> dict:
+    """Best-effort Cognee ingest when a live finding is persisted by WatchLoop."""
+    if not _memory_enabled():
+        return {"degraded": True, "reason": "cognee-disabled"}
+    try:
+        env = dict(os.environ)
+        client = CogneeClient.from_env(env)
+        if not client.settings.ready:
+            return {
+                "degraded": True,
+                "reason": client.settings.missing_reason() or "cognee-not-ready",
+            }
+        result = ingest_open_finding(client, dataset_name(env), finding)
+        return {
+            "degraded": bool(result.degraded),
+            "reason": result.reason or "",
+            "statusCode": result.status_code,
+        }
+    except Exception as exc:
+        return {"degraded": True, "reason": f"cognee:{type(exc).__name__}"}
+
+
+def maybe_ingest_vision_watch(
+    *,
+    camera_id: str,
+    zone_id: str,
+    labels: list[str],
+    detection_count: int,
+) -> dict:
+    """Best-effort Cognee ingest of a continuous-watch vision tick."""
+    if not _memory_enabled() or detection_count <= 0:
+        return {"degraded": True, "reason": "cognee-disabled-or-empty"}
+    try:
+        env = dict(os.environ)
+        client = CogneeClient.from_env(env)
+        if not client.settings.ready:
+            return {
+                "degraded": True,
+                "reason": client.settings.missing_reason() or "cognee-not-ready",
+            }
+        result = ingest_vision_watch(
+            client,
+            dataset_name(env),
+            camera_id=camera_id,
+            zone_id=zone_id,
+            labels=labels,
+            detection_count=detection_count,
+        )
+        return {
+            "degraded": bool(result.degraded),
+            "reason": result.reason or "",
+            "statusCode": result.status_code,
+        }
+    except Exception as exc:
+        return {"degraded": True, "reason": f"cognee:{type(exc).__name__}"}

@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Radio, Camera, BookMarked, LayoutGrid } from 'lucide-react';
+import { Radio, Camera, BookMarked, LayoutGrid, Activity } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { useFindingsStore } from '@/stores/findings';
 import { BAND_SEVERITY } from '@/types';
@@ -20,6 +20,7 @@ import {
   type VisionDetectionRow,
   type VoiceEventRow,
 } from '@/api/liveOps';
+import { fetchWatchStatus, startWatch, stopWatch, type WatchStatus } from '@/api/watch';
 import clsx from 'clsx';
 
 const RADIO_ROLES = new Set(['Safety_Engineer', 'administrator']);
@@ -50,6 +51,38 @@ export function LiveOpsStage({ className }: { className?: string }) {
   const [selectedCam, setSelectedCam] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('wall');
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [watch, setWatch] = useState<WatchStatus | null>(null);
+  const [watchBusy, setWatchBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const pollWatch = async () => {
+      try {
+        const s = await fetchWatchStatus();
+        if (!cancelled) setWatch(s);
+      } catch {
+        if (!cancelled) setWatch(null);
+      }
+    };
+    void pollWatch();
+    const id = setInterval(() => void pollWatch(), 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+
+  const toggleWatch = async () => {
+    setWatchBusy(true);
+    try {
+      const s = watch?.running ? await stopWatch() : await startWatch({ intervalS: 3 });
+      setWatch(s);
+    } catch {
+      /* status poll will refresh */
+    } finally {
+      setWatchBusy(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -138,9 +171,46 @@ export function LiveOpsStage({ className }: { className?: string }) {
       aria-label="Live Ops — cameras and radio"
     >
       <div className="h-8 px-3 border-b border-line flex items-center justify-between gap-3">
-        <span className="text-micro font-mono uppercase tracking-[0.12em] text-ink-dim">
-          Live Ops
-        </span>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-micro font-mono uppercase tracking-[0.12em] text-ink-dim">
+            Live Ops
+          </span>
+          <button
+            type="button"
+            onClick={() => void toggleWatch()}
+            disabled={watchBusy}
+            className={clsx(
+              'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-micro font-mono uppercase tracking-[0.08em] transition-colors',
+              watch?.running
+                ? 'border-ok/40 text-ok bg-ok/10'
+                : 'border-line text-ink-dim hover:text-ink hover:border-ink/30',
+              watchBusy && 'opacity-60 cursor-wait',
+            )}
+            title={
+              watch?.running
+                ? 'Stop continuous watch (vision + radio + sensors → fusion → memory)'
+                : 'Start continuous watch — real pipelines, not hardcoded UI'
+            }
+          >
+            <Activity className={clsx('h-3 w-3', watch?.running && 'animate-pulse')} />
+            {watch?.running ? 'Watch on' : 'Watch off'}
+          </button>
+          {watch?.running && (
+            <span className="text-micro font-mono text-ink-dim tabular-nums truncate">
+              tick {watch.ticks}
+              {watch.counts?.visionDetections != null && (
+                <> · v {watch.counts.visionDetections}</>
+              )}
+              {watch.counts?.voiceEvents != null && watch.counts.voiceEvents > 0 && (
+                <> · r {watch.counts.voiceEvents}</>
+              )}
+              {watch.counts?.findingsPersisted != null &&
+                watch.counts.findingsPersisted > 0 && (
+                  <> · f {watch.counts.findingsPersisted}</>
+                )}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3 text-micro font-mono text-ink-dim tabular-nums">
           <span>Cams · {liveCams.length || cameras.length}</span>
           <span>Radio · {radioAllowed ? radio.length : '—'}</span>

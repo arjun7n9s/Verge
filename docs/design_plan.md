@@ -99,6 +99,7 @@ Support
 **Mood:** Ops room first, triage second — industrial situation awareness without a mega-dashboard.
 
 - **Live Ops stage (mandatory):** multi-cam wall (MJPEG/snapshot from registry `source` / `VERGE_VISION_RTSP_URL`) + radio transcript rail with optional clip playback on `/`. Honest empty labels when quiet — never hide the whole stage. Detection stills from `detect-frame` (`/api/vision/frames/{id}`); demo sources are labeled DEMO, never invented plant CCTV.
+- **Continuous Watch (product heartbeat):** officer toggles **Watch on** → API `POST /api/watch/start` runs vision sample + radio chunks + sensor schedule → live fusion → findings SSE + Cognee. No frontend-hardcoded findings.
 - **Triage:** band-first finding list by default (IMMINENT → NEAR → WATCH); column kanban available as a toggle.
 - Optional Map / Response side rails — closed by default; never permanent equal panels.
 - Click finding → **`/findings/:id`** (full page). Prefer page over kitchen-sink modal.
@@ -231,6 +232,7 @@ Independent of backend phase numbers; coordinate APIs as needed.
 | 2026-07-20 | Added §13 Premium craft escalation (backed by [`design-resources/`](./design-resources/README.md)); Ash IA handoff (finding page, graph, Copilot thread) — U2–U6 partial, not complete |
 | 2026-07-20 | §6.1 Live Ops stage mandatory; band-first triage default; finding **Live** section; vision frame HTTP cache |
 | 2026-07-20 | §6.1 multi-cam MJPEG wall + radio audio clips; §6.2 incident timeline scrubber; `/api/cameras`, `/api/voice/clips` |
+| 2026-07-21 | Continuous WatchLoop (`/api/watch/*`) — vision/radio/sensors → fusion → Cognee; Live Ops Watch on/off |
 
 ---
 
