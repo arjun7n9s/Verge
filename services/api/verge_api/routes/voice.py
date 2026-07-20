@@ -6,6 +6,7 @@ import os
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from verge_voice import (
     PLANT_RADIO_HINTS_DEFAULT,
@@ -16,8 +17,6 @@ from verge_voice import (
     near_miss_from_transcript,
     transcribe_audio,
 )
-
-from fastapi.responses import Response
 
 from ..audio_clip_cache import get_clip, store_clip
 from ..hooks import maybe_ingest_near_miss, maybe_ingest_voice_ops
@@ -51,9 +50,8 @@ def _english_ops(result) -> str:
 
 def _guess_audio_type(filename: str | None, content_type: str | None) -> str:
     ct = (content_type or "").split(";")[0].strip().lower()
-    if ct.startswith("audio/") or ct in {"application/octet-stream", "application/ogg"}:
-        if ct and ct != "application/octet-stream":
-            return ct
+    if ct.startswith("audio/") or ct == "application/ogg":
+        return ct
     name = (filename or "").lower()
     if name.endswith(".wav"):
         return "audio/wav"

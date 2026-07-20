@@ -121,7 +121,7 @@ def grab_snapshot(camera_id: str, env: dict[str, str] | None = None) -> Snapshot
 def _demo_jpeg(camera_id: str, zone_id: str) -> bytes:
     """Labeled demo still — clearly not a live plant feed (P4)."""
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image, ImageDraw
     except ImportError:
         # Minimal JPEG header-ish fallback via opencv if PIL missing.
         return _demo_jpeg_cv2(camera_id, zone_id)
