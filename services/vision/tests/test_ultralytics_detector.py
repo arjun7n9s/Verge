@@ -216,7 +216,9 @@ def test_provider_from_env_builds_real_detector_when_enabled():
     })
     assert isinstance(det, UltralyticsDetector)
     # Falls back to the bundled demo camera registry.
-    assert det._cameras.get("CAM-B05") == CameraZone(zone_id="B-05", restricted=True)
+    assert det._cameras.get("CAM-B05") == CameraZone(
+        zone_id="B-05", restricted=True, source="demo"
+    )
 
 
 def test_provider_from_env_ultralytics_disabled_by_default():
