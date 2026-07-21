@@ -441,6 +441,30 @@
       hazards: [gas, lel, smell, flammable]
       max_age_s: 900
 
+# Compound early finding — voice + LEL near threshold + occupancy vision.
+# pct is "within pct of alarm" (near when value >= (1-pct)*thr). Disable the
+# rising shortcut so a slow creep alone cannot satisfy this predicate.
+- id: hot-work-compound-gas-occupancy
+  name: Compound hot-work gas risk with people still in bay
+  severity: critical
+  base_confidence: 0.92
+  all:
+    - type: permit_active
+      kind: hot-work
+    - type: voice_hazard_mention
+      hazards: [gas, lel, smell, flammable, hold]
+      max_age_s: 900
+    - type: gas_near_threshold
+      sensor_kind: gas-lel
+      pct: 0.55
+      min_rise_per_min: 999
+    - type: vision_detection
+      labels: [person, people, worker, ppe-missing, no-hardhat, no-ppe]
+      min_confidence: 0.40
+      max_age_s: 300
+  forecast:
+    sensor_kind: gas-lel
+
 - id: hot-work-vision-no-ppe
   name: Hot work with vision PPE gap
   severity: warning

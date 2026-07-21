@@ -20,7 +20,8 @@ import {
   type VisionDetectionRow,
   type VoiceEventRow,
 } from '@/api/liveOps';
-import { fetchWatchStatus, startWatch, stopWatch, type WatchStatus } from '@/api/watch';
+import { startDemo, stopDemo } from '@/api/demo';
+import { fetchWatchStatus, type WatchStatus } from '@/api/watch';
 import clsx from 'clsx';
 
 const RADIO_ROLES = new Set(['Safety_Engineer', 'administrator']);
@@ -72,10 +73,13 @@ export function LiveOpsStage({ className }: { className?: string }) {
     };
   }, []);
 
-  const toggleWatch = async () => {
+  const toggleDemo = async () => {
     setWatchBusy(true);
     try {
-      const s = watch?.running ? await stopWatch() : await startWatch({ intervalS: 3 });
+      const s =
+        watch?.running && watch?.mode === 'demo'
+          ? await stopDemo()
+          : await startDemo({ scenarioId: 'compound-drill', intervalS: 3 });
       setWatch(s);
     } catch {
       /* status poll will refresh */
@@ -83,6 +87,8 @@ export function LiveOpsStage({ className }: { className?: string }) {
       setWatchBusy(false);
     }
   };
+
+  const demoRunning = Boolean(watch?.running && watch?.mode === 'demo');
 
   useEffect(() => {
     let cancelled = false;
@@ -177,24 +183,32 @@ export function LiveOpsStage({ className }: { className?: string }) {
           </span>
           <button
             type="button"
-            onClick={() => void toggleWatch()}
+            onClick={() => void toggleDemo()}
             disabled={watchBusy}
             className={clsx(
               'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm border text-micro font-mono uppercase tracking-[0.08em] transition-colors',
-              watch?.running
+              demoRunning
                 ? 'border-ok/40 text-ok bg-ok/10'
                 : 'border-line text-ink-dim hover:text-ink hover:border-ink/30',
               watchBusy && 'opacity-60 cursor-wait',
             )}
             title={
-              watch?.running
-                ? 'Stop continuous watch (vision + radio + sensors → fusion → memory)'
-                : 'Start continuous watch — real pipelines, not hardcoded UI'
+              demoRunning
+                ? 'Stop demo drill (sensors + radio + cameras → live fusion)'
+                : 'Initiate demo — multi-source publishers only; findings come from fusion'
             }
           >
-            <Activity className={clsx('h-3 w-3', watch?.running && 'animate-pulse')} />
-            {watch?.running ? 'Watch on' : 'Watch off'}
+            <Activity className={clsx('h-3 w-3', demoRunning && 'animate-pulse')} />
+            {demoRunning ? 'Stop demo' : 'Initiate demo'}
           </button>
+          {demoRunning && (
+            <span
+              className="text-micro font-mono uppercase tracking-[0.1em] text-watch truncate"
+              title={watch?.coach || 'Watching sensors, radio, and cameras together.'}
+            >
+              {watch?.scenarioLabel || 'DEMO DRILL · multi-source'}
+            </span>
+          )}
           {watch?.running && (
             <span className="text-micro font-mono text-ink-dim tabular-nums truncate">
               tick {watch.ticks}

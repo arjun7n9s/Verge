@@ -17,14 +17,16 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from verge_schema.core import Permit
 from verge_schema.findings import RiskFinding
 
 from . import camera_stream
 from .audio_clip_cache import store_clip
+from .demo_scenario import ScenarioPack, load_scenario
 from .hooks import (
     maybe_ingest_open_finding,
     maybe_ingest_vision_watch,
@@ -56,6 +58,10 @@ def _env_float(name: str, default: float) -> float:
 @dataclass
 class WatchStatus:
     running: bool = False
+    mode: str = "watch"  # watch | demo
+    scenario_id: str | None = None
+    scenario_label: str | None = None
+    coach: str | None = None
     started_at: str | None = None
     interval_s: float = 3.0
     ticks: int = 0
@@ -68,6 +74,7 @@ class WatchStatus:
             "sensors": True,
             "fuse": True,
             "cognee": True,
+            "workers": True,
         }
     )
     counts: dict[str, int] = field(
@@ -76,6 +83,7 @@ class WatchStatus:
             "visionDetections": 0,
             "voiceEvents": 0,
             "sensorReads": 0,
+            "workerFixes": 0,
             "findingsPersisted": 0,
             "cogneeIngests": 0,
         }
@@ -85,6 +93,10 @@ class WatchStatus:
     def to_dict(self) -> dict[str, Any]:
         return {
             "running": self.running,
+            "mode": self.mode,
+            "scenarioId": self.scenario_id,
+            "scenarioLabel": self.scenario_label,
+            "coach": self.coach,
             "startedAt": self.started_at,
             "intervalS": self.interval_s,
             "ticks": self.ticks,
@@ -109,6 +121,7 @@ class WatchController:
         self._seen_finding_keys: set[str] = set()
         self._app: Any = None
         self._voice_auto_fuse_prev: str | None = None
+        self._pack: ScenarioPack | None = None
 
     def bind_app(self, app) -> None:
         self._app = app
@@ -121,6 +134,7 @@ class WatchController:
             "sensors": _env_bool("VERGE_WATCH_SENSORS", True),
             "fuse": _env_bool("VERGE_WATCH_FUSE", True),
             "cognee": _env_bool("VERGE_WATCH_COGNEE", True),
+            "workers": True,
         }
 
     def _load_radio_paths(self) -> list[Path]:
@@ -149,19 +163,43 @@ class WatchController:
         return out
 
     def start(
-        self, *, interval_s: float | None = None, legs: dict[str, bool] | None = None
+        self,
+        *,
+        interval_s: float | None = None,
+        legs: dict[str, bool] | None = None,
+        scenario_id: str | None = None,
     ) -> dict:
         with self._lock:
             if self.status.running and self._thread and self._thread.is_alive():
                 return self.status.to_dict()
             self.configure_from_env()
+            pack: ScenarioPack | None = None
+            if scenario_id:
+                pack = load_scenario(scenario_id)
+                pack.reset_cues()
+                self._pack = pack
+                self.status.mode = "demo"
+                self.status.scenario_id = pack.id
+                self.status.scenario_label = pack.label
+                self.status.coach = pack.coach or None
+                self.status.interval_s = max(1.0, pack.interval_s)
+            else:
+                self._pack = None
+                self.status.mode = "watch"
+                self.status.scenario_id = None
+                self.status.scenario_label = None
+                self.status.coach = None
             if interval_s is not None:
                 self.status.interval_s = max(1.0, float(interval_s))
             if legs:
                 for k, v in legs.items():
                     if k in self.status.legs:
                         self.status.legs[k] = bool(v)
-            self._radio_paths = self._load_radio_paths()
+            if pack:
+                # Prefer pack radio timeline; env glob is watch-only fallback.
+                self._radio_paths = []
+            else:
+                self._radio_paths = self._load_radio_paths()
             self._radio_idx = 0
             self._seen_finding_keys = self._existing_finding_keys()
             self._stop.clear()
@@ -169,8 +207,12 @@ class WatchController:
             self.status.started_at = datetime.now(UTC).isoformat()
             self.status.last_error = None
             self.status.ticks = 0
+            for k in self.status.counts:
+                self.status.counts[k] = 0
             self._voice_auto_fuse_prev = os.environ.get("VERGE_VOICE_AUTO_FUSE")
             os.environ["VERGE_VOICE_AUTO_FUSE"] = "false"
+            if pack:
+                self._seed_demo_permit(pack)
             self._thread = threading.Thread(
                 target=self._run,
                 name="verge-watch-loop",
@@ -178,6 +220,17 @@ class WatchController:
             )
             self._thread.start()
             return self.status.to_dict()
+
+    def start_demo(
+        self,
+        *,
+        scenario_id: str = "compound-drill",
+        interval_s: float | None = None,
+        legs: dict[str, bool] | None = None,
+    ) -> dict:
+        return self.start(
+            interval_s=interval_s, legs=legs, scenario_id=scenario_id
+        )
 
     def stop(self) -> dict:
         with self._lock:
@@ -188,12 +241,40 @@ class WatchController:
         with self._lock:
             self.status.running = False
             self._thread = None
+            self._pack = None
+            self.status.mode = "watch"
+            self.status.scenario_id = None
+            self.status.scenario_label = None
+            self.status.coach = None
             if self._voice_auto_fuse_prev is None:
                 os.environ.pop("VERGE_VOICE_AUTO_FUSE", None)
             else:
                 os.environ["VERGE_VOICE_AUTO_FUSE"] = self._voice_auto_fuse_prev
             self._voice_auto_fuse_prev = None
             return self.status.to_dict()
+
+    def _seed_demo_permit(self, pack: ScenarioPack) -> None:
+        app = self._app
+        if app is None:
+            return
+        registry = getattr(app.state, "permits", None)
+        if registry is None:
+            return
+        meta = pack.permit or {}
+        zone = str(meta.get("zoneId") or pack.zone_primary)
+        hours = float(meta.get("validHours") or 4)
+        now = datetime.now(UTC)
+        permit = Permit(
+            permit_id=str(meta.get("permitId") or f"PW-DEMO-{pack.id}"),
+            kind=str(meta.get("kind") or "hot-work"),
+            zone_id=zone,
+            valid_from=now - timedelta(minutes=5),
+            valid_to=now + timedelta(hours=hours),
+        )
+        try:
+            registry.upsert(permit)
+        except Exception:  # noqa: BLE001
+            log.exception("demo permit seed failed")
 
     def _existing_finding_keys(self) -> set[str]:
         app = self._app
@@ -236,17 +317,42 @@ class WatchController:
                 break
         self.status.running = False
 
+    def _elapsed_s(self) -> float:
+        started = self.status.started_at
+        if not started:
+            return 0.0
+        try:
+            t0 = datetime.fromisoformat(started.replace("Z", "+00:00"))
+        except ValueError:
+            return 0.0
+        return max(0.0, (datetime.now(UTC) - t0).total_seconds())
+
     def _tick_sync(self) -> None:
         app = self._app
         state = app.state
         tick: dict[str, Any] = {}
+        elapsed = self._elapsed_s()
+        pack = self._pack
 
+        if pack and pack.duration_s > 0 and elapsed > pack.duration_s + 30:
+            # Soft end: keep running but stop advancing scripted cues.
+            tick["scenario"] = {"elapsedS": round(elapsed, 1), "complete": True}
+
+        if self.status.legs.get("workers") and pack:
+            tick["workers"] = self._tick_workers(state, pack, elapsed)
         if self.status.legs.get("vision"):
             tick["vision"] = self._tick_vision(state)
+            if pack:
+                inj = self._tick_vision_inject(state, pack, elapsed, tick["vision"])
+                if inj.get("injected"):
+                    tick["visionInject"] = inj
         if self.status.legs.get("voice"):
-            tick["voice"] = self._tick_voice(state)
+            if pack:
+                tick["voice"] = self._tick_voice_scenario(state, pack, elapsed)
+            else:
+                tick["voice"] = self._tick_voice(state)
         if self.status.legs.get("sensors"):
-            tick["sensors"] = self._tick_sensors(state)
+            tick["sensors"] = self._tick_sensors(state, pack, elapsed)
         if self.status.legs.get("fuse"):
             tick["fuse"] = self._tick_fuse(app)
         self.status.last = tick
@@ -382,8 +488,196 @@ class WatchController:
             "cognee": cognee,
         }
 
-    def _tick_sensors(self, state) -> dict[str, Any]:
-        """Advance plant sensors on a watch schedule (honest drill cadence)."""
+    def _tick_vision_inject(
+        self,
+        state,
+        pack: ScenarioPack,
+        elapsed: float,
+        vision_tick: dict[str, Any],
+    ) -> dict[str, Any]:
+        """CI / degraded occupancy: inject person cue if live detect is empty."""
+        from .vision_events import record_vision_detections
+
+        live_dets = 0
+        for cam in vision_tick.get("cameras") or []:
+            live_dets += int(cam.get("detections") or 0)
+        if live_dets > 0:
+            return {"injected": False, "reason": "live-detections-present"}
+        due = [
+            c
+            for c in pack.vision
+            if not c.played and elapsed >= c.at
+        ]
+        if not due:
+            return {"injected": False, "reason": "no-due-cues"}
+        payloads = []
+        for cue in due:
+            cue.played = True
+            payloads.append(
+                {
+                    "detectionId": f"VD-DEMO-{uuid.uuid4().hex[:8].upper()}",
+                    "ts": datetime.now(UTC).isoformat(),
+                    "cameraId": cue.camera_id,
+                    "zoneId": cue.zone_id,
+                    "label": cue.label,
+                    "confidence": cue.confidence,
+                    "source": "demo-inject",
+                }
+            )
+        recorded = record_vision_detections(state, payloads)
+        self.status.counts["visionDetections"] += len(recorded)
+        return {
+            "injected": True,
+            "count": len(recorded),
+            "labels": [c.label for c in due],
+        }
+
+    def _tick_workers(
+        self, state, pack: ScenarioPack, elapsed: float
+    ) -> dict[str, Any]:
+        occupancy = getattr(state, "occupancy", None)
+        if occupancy is None:
+            return {"ok": False, "reason": "no-occupancy"}
+        now = datetime.now(UTC).isoformat()
+        applied = []
+        for cue in pack.workers:
+            if cue.played or elapsed < cue.at or not cue.worker_id:
+                continue
+            payload = {
+                "type": "worker-location",
+                "ts": now,
+                "workerId": cue.worker_id,
+                "zoneId": cue.zone_id,
+                "name": cue.name,
+                "role": cue.role,
+                "source": "demo-drill",
+                "eventId": f"DEMO-W-{uuid.uuid4().hex[:8].upper()}",
+            }
+            try:
+                occupancy.ingest(payload)
+                cue.played = True
+                self.status.counts["workerFixes"] += 1
+                applied.append(
+                    {
+                        "workerId": cue.worker_id,
+                        "zoneId": cue.zone_id,
+                        "at": cue.at,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warning("demo worker ingest failed: %s", exc)
+        return {"ok": True, "applied": applied, "count": len(applied)}
+
+    def _tick_voice_scenario(
+        self, state, pack: ScenarioPack, elapsed: float
+    ) -> dict[str, Any]:
+        """Play timed radio cues once; WAV → Melia, else English text fallback."""
+        due = next(
+            (c for c in pack.radio if not c.played and elapsed >= c.at),
+            None,
+        )
+        if due is None:
+            return {"ok": True, "idle": True, "elapsedS": round(elapsed, 1)}
+
+        due.played = True
+        if due.path is not None and due.path.is_file():
+            audio = due.path.read_bytes()
+            if audio:
+                from verge_voice import transcribe_audio
+
+                llm = getattr(state, "llm", None)
+                result = transcribe_audio(
+                    audio,
+                    filename=due.path.name,
+                    content_type="audio/wav",
+                    provider=llm,
+                )
+                english = (
+                    getattr(result, "transcript_en", None)
+                    or getattr(result, "transcript", "")
+                    or ""
+                )
+                if not result.degraded and str(english).strip():
+                    structured = getattr(result, "structured", None) or {}
+                    zones = structured.get("zones") or []
+                    zone_id = zones[0] if zones else due.zone_id
+                    ev = record_voice_event(
+                        state,
+                        transcript=str(english),
+                        structured=structured,
+                        zone_id=zone_id,
+                        source="demo-radio",
+                        transcript_original=getattr(
+                            result, "transcript_original", None
+                        ),
+                        languages_detected=list(
+                            getattr(result, "languages_detected", ()) or ()
+                        ),
+                    )
+                    uri = store_clip(
+                        state, ev.event_id, audio, content_type="audio/wav"
+                    )
+                    if uri:
+                        ev.audio_clip_uri = uri
+                    self.status.counts["voiceEvents"] += 1
+                    cognee = None
+                    if self.status.legs.get("cognee"):
+                        cognee = maybe_ingest_voice_ops(
+                            str(english),
+                            structured=structured,
+                            source="demo-radio",
+                        )
+                        if cognee and not cognee.get("degraded"):
+                            self.status.counts["cogneeIngests"] += 1
+                    return {
+                        "ok": True,
+                        "path": str(due.path),
+                        "eventId": ev.event_id,
+                        "zoneId": ev.zone_id,
+                        "transcript": str(english)[:200],
+                        "audioClipUri": uri or None,
+                        "lang": due.lang,
+                        "cognee": cognee,
+                    }
+
+        # Degraded path: inject script text so fusion still has a voice leg.
+        text = due.text or f"Radio cue at B-04 ({due.file})"
+        hazards = []
+        low = text.lower()
+        for h in ("gas", "smell", "lel", "hold", "hot-work", "flammable"):
+            if h.replace("-", " ") in low or h in low:
+                hazards.append(h if h != "hot-work" else "hot-work")
+        structured = {
+            "zones": [due.zone_id],
+            "hazards": hazards or ["gas", "smell"],
+        }
+        ev = record_voice_event(
+            state,
+            transcript=text,
+            structured=structured,
+            zone_id=due.zone_id,
+            source="demo-radio-text",
+            languages_detected=[due.lang],
+        )
+        self.status.counts["voiceEvents"] += 1
+        return {
+            "ok": True,
+            "degraded": True,
+            "reason": "no-wav-text-fallback",
+            "file": due.file,
+            "eventId": ev.event_id,
+            "zoneId": ev.zone_id,
+            "transcript": text[:200],
+            "lang": due.lang,
+        }
+
+    def _tick_sensors(
+        self,
+        state,
+        pack: ScenarioPack | None = None,
+        elapsed: float | None = None,
+    ) -> dict[str, Any]:
+        """Advance plant sensors on a watch / scenario curve (honest drill)."""
         plant = getattr(state, "plant", None)
         buf = getattr(state, "readings", None)
         if plant is None or buf is None:
@@ -392,23 +686,19 @@ class WatchController:
         if not sensors:
             return {"ok": False, "reason": "no-plant-sensors"}
 
-        started = self.status.started_at
-        if started:
-            try:
-                t0 = datetime.fromisoformat(started.replace("Z", "+00:00"))
-            except ValueError:
-                t0 = datetime.now(UTC)
-        else:
-            t0 = datetime.now(UTC)
-        elapsed = max(0.0, (datetime.now(UTC) - t0).total_seconds())
-        if elapsed < 40:
-            factor = 0.15
-        elif elapsed < 90:
-            factor = 0.15 + (elapsed - 40) / 50 * 0.55
+        if elapsed is None:
+            elapsed = self._elapsed_s()
+        if pack is not None:
+            factor = pack.sensor_factor(elapsed)
+        elif elapsed < 40:
+            factor = 0.04
+        elif elapsed < 100:
+            # Creep under classic alarm; stay soft vs early fusion alone.
+            factor = 0.04 + (elapsed - 40) / 60 * 0.10
         elif elapsed < 150:
-            factor = 0.70
+            factor = 0.14 + (elapsed - 100) / 50 * 0.34
         else:
-            factor = max(0.20, 0.70 - (elapsed - 150) / 120 * 0.4)
+            factor = max(0.20, 0.48 - (elapsed - 150) / 120 * 0.25)
 
         now = datetime.now(UTC).isoformat()
         ingested = []

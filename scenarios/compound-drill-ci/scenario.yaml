@@ -1,0 +1,74 @@
+# Compressed pack for CI — same story, ~20s wall clock.
+id: compound-drill-ci
+name: Meridian Process Unit — compound gas / hot-work (CI)
+label: DEMO DRILL · multi-source
+coach: Watching sensors, radio, and cameras together.
+duration_s: 25
+interval_s: 1.0
+zone_primary: B-04
+zone_secondary: B-05
+
+permit:
+  permitId: PW-DEMO-HW-B04-CI
+  kind: hot-work
+  zoneId: B-04
+  validHours: 4
+
+sensors:
+  curve:
+    - { at: 0, factor: 0.04 }
+    - { at: 3, factor: 0.06 }
+    - { at: 6, factor: 0.12 }
+    - { at: 9, factor: 0.28 }
+    - { at: 12, factor: 0.45 }
+    - { at: 20, factor: 0.50 }
+
+radio:
+  - at: 2
+    file: missing.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Permit desk to bay B-04 — hot work is active, keep the area clear.
+  - at: 5
+    file: missing.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Field tech near B-04 reporting smell of gas, please check LEL at the bay.
+  - at: 8
+    file: missing.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Welder at B-04 still finishing, people still in bay, hold if needed.
+  - at: 11
+    file: missing.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Control to B-04 — hold hot work, clear the bay, confirm LEL.
+
+workers:
+  - at: 0
+    workerId: W-101
+    zoneId: B-04
+    name: Field tech
+    role: field-tech
+  - at: 0
+    workerId: W-102
+    zoneId: B-04
+    name: Welder
+    role: welder
+
+vision:
+  - at: 7
+    cameraId: demo
+    zoneId: B-04
+    label: person
+    confidence: 0.8
+  - at: 10
+    cameraId: demo
+    zoneId: B-04
+    label: person
+    confidence: 0.82

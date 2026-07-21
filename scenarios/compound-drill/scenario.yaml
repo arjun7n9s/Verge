@@ -1,0 +1,136 @@
+# Compound multi-source demo drill — Meridian Process Unit (fictional).
+# UI never hardcodes findings; this pack drives publishers only.
+id: compound-drill
+name: Meridian Process Unit — compound gas / hot-work
+label: DEMO DRILL · multi-source
+coach: Watching sensors, radio, and cameras together.
+duration_s: 210
+interval_s: 3.0
+zone_primary: B-04
+zone_secondary: B-05
+
+permit:
+  permitId: PW-DEMO-HW-B04
+  kind: hot-work
+  zoneId: B-04
+  validHours: 4
+
+# LEL as fraction of sensor threshold. Stay under classic plant alarm early;
+# creep so single-stream LEL alone is weak until converge with voice + vision.
+sensors:
+  curve:
+    - { at: 0, factor: 0.04 }
+    - { at: 40, factor: 0.05 }
+    - { at: 80, factor: 0.07 }
+    - { at: 100, factor: 0.11 }
+    - { at: 120, factor: 0.18 }
+    - { at: 140, factor: 0.32 }
+    - { at: 155, factor: 0.48 }
+    - { at: 175, factor: 0.55 }
+    - { at: 210, factor: 0.28 }
+
+# Radio cues — play once when elapsed crosses `at`. Prefer WAV under radio/;
+# if missing, inject English `text` via voice buffer (degraded Melia path).
+radio:
+  - at: 45
+    file: r01_en_permit.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Permit desk to bay B-04 — hot work is active, keep the area clear of
+      unnecessary personnel.
+  - at: 85
+    file: r02_hi_smell.wav
+    lang: hi
+    zoneId: B-04
+    text: >-
+      Field tech near B-04 reporting smell of gas, please check LEL at the bay.
+  - at: 115
+    file: r03_ta_busy.wav
+    lang: ta
+    zoneId: B-04
+    text: >-
+      Welder at B-04 still finishing the job, people still in bay, please wait.
+  - at: 130
+    file: r04_ur_concern.wav
+    lang: ur
+    zoneId: B-04
+    text: >-
+      Smell stronger near the line at B-04, request gas check and LEL reading.
+  - at: 150
+    file: r05_en_hold.wav
+    lang: en
+    zoneId: B-04
+    text: >-
+      Control to B-04 — hold hot work, clear the bay, confirm LEL.
+  - at: 175
+    file: r06_bn_or_mr_clear.wav
+    lang: bn
+    zoneId: B-04
+    text: >-
+      Rover confirming bay B-04 clearing, leaving the area now.
+
+workers:
+  - at: 0
+    workerId: W-101
+    zoneId: B-04
+    name: Field tech
+    role: field-tech
+  - at: 0
+    workerId: W-102
+    zoneId: B-04
+    name: Welder
+    role: welder
+  - at: 0
+    workerId: W-103
+    zoneId: B-04
+    name: Helper
+    role: helper
+  - at: 0
+    workerId: W-201
+    zoneId: CONTROL
+    name: Control
+    role: control
+  - at: 0
+    workerId: W-202
+    zoneId: DESK
+    name: Permit desk
+    role: permit-desk
+  - at: 40
+    workerId: W-301
+    zoneId: B-05
+    name: Rover
+    role: rover
+  - at: 115
+    workerId: W-103
+    zoneId: B-04
+    name: Helper
+    role: helper
+  - at: 160
+    workerId: W-101
+    zoneId: B-05
+    name: Field tech
+    role: field-tech
+  - at: 175
+    workerId: W-102
+    zoneId: B-05
+    name: Welder
+    role: welder
+  - at: 175
+    workerId: W-103
+    zoneId: B-05
+    name: Helper
+    role: helper
+
+# Only used when live demo-cam detect returns empty (honest degraded path).
+vision:
+  - at: 115
+    cameraId: demo
+    zoneId: B-04
+    label: person
+    confidence: 0.72
+  - at: 145
+    cameraId: demo
+    zoneId: B-04
+    label: person
+    confidence: 0.78

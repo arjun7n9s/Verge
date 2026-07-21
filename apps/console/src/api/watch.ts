@@ -2,6 +2,10 @@
 
 export interface WatchStatus {
   running: boolean;
+  mode?: string;
+  scenarioId?: string | null;
+  scenarioLabel?: string | null;
+  coach?: string | null;
   startedAt?: string | null;
   intervalS: number;
   ticks: number;
