@@ -38,7 +38,18 @@ export async function startDemo(opts?: {
       workers: opts?.workers,
     }),
   });
-  if (!res.ok) throw new Error(`demo start ${res.status}`);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok) {
+    const detail = ct.includes('application/json')
+      ? JSON.stringify(await res.json()).slice(0, 200)
+      : (await res.text()).slice(0, 120);
+    throw new Error(`demo start ${res.status}: ${detail}`);
+  }
+  if (!ct.includes('application/json')) {
+    throw new Error(
+      'demo start got HTML instead of JSON — API proxy is down (restart vite with API on :8000/:8001)',
+    );
+  }
   const body = (await res.json()) as { watch: DemoStatus['watch'] };
   return body.watch;
 }

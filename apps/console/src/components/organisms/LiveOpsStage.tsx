@@ -81,6 +81,7 @@ export function LiveOpsStage({
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [watch, setWatch] = useState<WatchStatus | null>(null);
   const [watchBusy, setWatchBusy] = useState(false);
+  const [demoErr, setDemoErr] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +109,7 @@ export function LiveOpsStage({
 
   const toggleDemo = async () => {
     setWatchBusy(true);
+    setDemoErr(null);
     try {
       const s =
         watch?.running && watch?.mode === 'demo'
@@ -115,8 +117,8 @@ export function LiveOpsStage({
           : await startDemo({ scenarioId: 'compound-drill', intervalS: 3 });
       setWatch(s);
       onDemoChange?.(Boolean(s.running && s.mode === 'demo'));
-    } catch {
-      /* status poll will refresh */
+    } catch (err) {
+      setDemoErr(err instanceof Error ? err.message : 'Demo start failed');
     } finally {
       setWatchBusy(false);
     }
@@ -224,6 +226,11 @@ export function LiveOpsStage({
                 ? watch?.coach || 'Watching sensors, radio, and cameras together.'
                 : 'Start the drill to watch sensors, radio, and cameras converge — findings come from live fusion, not the UI.'}
             </p>
+            {demoErr && (
+              <p className="text-xs text-imminent leading-snug mt-1 max-w-xl" role="alert">
+                {demoErr}
+              </p>
+            )}
           </div>
           <button
             type="button"
