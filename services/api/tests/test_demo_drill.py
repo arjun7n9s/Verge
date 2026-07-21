@@ -72,7 +72,8 @@ def test_demo_start_compound_ci_persists_multi_source_finding():
                 title = (f.get("title") or "").lower()
                 lineage = f.get("lineage") or []
                 kinds = {str(x).split(":")[0] for x in lineage}
-                if "compound" in title and "voice" in kinds and "reading" in kinds and "vision" in kinds:
+                multi = {"voice", "reading", "vision"} <= kinds
+                if "compound" in title and multi:
                     compound = f
                     break
             if compound:
