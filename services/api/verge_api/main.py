@@ -49,6 +49,7 @@ from .routes.commission import router as commission_router
 from .routes.compliance import router as compliance_router
 from .routes.contracts import router as contracts_router
 from .routes.degradation import router as degradation_router
+from .routes.demo import router as demo_router
 from .routes.docs import router as docs_router
 from .routes.emergency import router as emergency_router
 from .routes.eval_report import router as eval_report_router
@@ -72,7 +73,6 @@ from .routes.reports import router as reports_router
 from .routes.stream import router as stream_router
 from .routes.vision import router as vision_router
 from .routes.voice import router as voice_router
-from .routes.demo import router as demo_router
 from .routes.watch import router as watch_router
 from .routes.workers import router as workers_router
 from .seed import seed
