@@ -3,18 +3,21 @@ import { execSync } from "child_process";
 import { resolve } from "path";
 import { defineConfig } from "vite";
 
-// Detect if the FastAPI gateway is actively running on port 8000.
-// If it is offline, we disable the proxy configuration completely to prevent Vite
-// from spamming ECONNREFUSED connection traces to the terminal.
-let isBackendUp = false;
-try {
-  const cmd = process.platform === "win32" ? "netstat -ano" : "netstat -an";
-  const output = execSync(cmd, { encoding: "utf8" });
-  isBackendUp = /:8000\b/.test(output);
-} catch {
-  // If detection fails, assume backend is up so proxying still works cross-platform
-  isBackendUp = true;
+// Prefer API on :8000; fall back to :8001 (common local alternate).
+// If neither is listening, disable the proxy so Vite does not spam ECONNREFUSED.
+function detectApiTarget(): string | null {
+  try {
+    const cmd = process.platform === "win32" ? "netstat -ano" : "netstat -an";
+    const output = execSync(cmd, { encoding: "utf8" });
+    if (/:8000\b/.test(output)) return "http://localhost:8000";
+    if (/:8001\b/.test(output)) return "http://localhost:8001";
+  } catch {
+    return "http://localhost:8000";
+  }
+  return null;
 }
+
+const apiTarget = detectApiTarget();
 
 export default defineConfig({
   plugins: [react()],
@@ -24,15 +27,18 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
-    proxy: isBackendUp
+    // 5173 is often taken by other local Vite apps; try 5174 next.
+    port: 5174,
+    strictPort: false,
+    host: "127.0.0.1",
+    proxy: apiTarget
       ? {
           "/api": {
-            target: "http://localhost:8000",
+            target: apiTarget,
             changeOrigin: true,
           },
           "/health": {
-            target: "http://localhost:8000",
+            target: apiTarget,
             changeOrigin: true,
           },
         }

@@ -34,8 +34,14 @@ export default function FindingsView() {
   const [mobileTab, setMobileTab] = useState<'home' | 'map' | 'permits' | 'profile'>('home');
   const [rail, setRail] = useState<Rail>(null);
   const [triageMode, setTriageMode] = useState<TriageMode>('band');
+  const [demoRunning, setDemoRunning] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const loadDataRef = useRef<() => Promise<void>>(async () => {});
+
+  const onDemoChange = useCallback((running: boolean) => {
+    setDemoRunning(running);
+    if (running) setRail(null);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -113,7 +119,7 @@ export default function FindingsView() {
         <div className="flex-1 overflow-y-auto scrollbar p-4 pb-16">
           {mobileTab === 'home' && (
             <div className="flex flex-col gap-3">
-              <LiveOpsStage />
+              <LiveOpsStage onDemoChange={onDemoChange} />
               <span className="ruled-label">Active field findings</span>
               {filteredFindings.map((finding) => (
                 <FindingCardMobile key={finding.findingId} finding={finding} onChange={loadData} />
@@ -162,68 +168,88 @@ export default function FindingsView() {
       )}
 
       {/* Live Ops — mandatory presence; never hidden when quiet */}
-      <LiveOpsStage />
+      <LiveOpsStage onDemoChange={onDemoChange} />
 
-      {/* Filter bar + triage mode + rail entries */}
-      <div className="flex items-center justify-between gap-4 border-b border-line pb-3 shrink-0">
-        <FindingFilters />
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-xs text-ink-dim tabular-nums hidden xl:inline">
-            Showing <span className="font-semibold text-ink">{filteredFindings.length}</span> findings
-          </span>
-          <div className="flex bg-panel-2 border border-line p-0.5 rounded" role="group" aria-label="Triage layout">
-            <button
-              onClick={() => setTriageMode('band')}
-              aria-pressed={triageMode === 'band'}
-              className={clsx(
-                'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
-                triageMode === 'band' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
-              )}
-            >
-              <LayoutList className="h-3 w-3" />
-              Band
-            </button>
-            <button
-              onClick={() => setTriageMode('columns')}
-              aria-pressed={triageMode === 'columns'}
-              className={clsx(
-                'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
-                triageMode === 'columns' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
-              )}
-            >
-              <Columns3 className="h-3 w-3" />
-              Columns
-            </button>
-          </div>
-          <div className="flex bg-panel-2 border border-line p-0.5 rounded" role="group" aria-label="Side rail">
-            <button
-              onClick={() => setRail(rail === 'map' ? null : 'map')}
-              aria-pressed={rail === 'map'}
-              className={clsx(
-                'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
-                rail === 'map' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
-              )}
-            >
-              <Map className="h-3 w-3" />
-              Map
-            </button>
-            <button
-              onClick={() => setRail(rail === 'response' ? null : 'response')}
-              aria-pressed={rail === 'response'}
-              className={clsx(
-                'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
-                rail === 'response' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
-              )}
-            >
-              <Siren className="h-3 w-3" />
-              Response
-            </button>
-          </div>
+      {/* Triage — secondary during demo drill */}
+      <div
+        className={clsx(
+          'flex items-center justify-between gap-4 border-b border-line pb-3 shrink-0',
+          demoRunning && 'opacity-80',
+        )}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {demoRunning && (
+            <span className="ruled-label shrink-0 !mb-0">Triage</span>
+          )}
+          <FindingFilters />
         </div>
+        {!demoRunning && (
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs text-ink-dim tabular-nums hidden xl:inline">
+              Showing <span className="font-semibold text-ink">{filteredFindings.length}</span>{' '}
+              findings
+            </span>
+            <div className="flex bg-panel-2 border border-line p-0.5 rounded" role="group" aria-label="Triage layout">
+              <button
+                onClick={() => setTriageMode('band')}
+                aria-pressed={triageMode === 'band'}
+                className={clsx(
+                  'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
+                  triageMode === 'band' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
+                )}
+              >
+                <LayoutList className="h-3 w-3" />
+                Band
+              </button>
+              <button
+                onClick={() => setTriageMode('columns')}
+                aria-pressed={triageMode === 'columns'}
+                className={clsx(
+                  'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
+                  triageMode === 'columns' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
+                )}
+              >
+                <Columns3 className="h-3 w-3" />
+                Columns
+              </button>
+            </div>
+            <div className="flex bg-panel-2 border border-line p-0.5 rounded" role="group" aria-label="Side rail">
+              <button
+                onClick={() => setRail(rail === 'map' ? null : 'map')}
+                aria-pressed={rail === 'map'}
+                className={clsx(
+                  'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
+                  rail === 'map' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
+                )}
+              >
+                <Map className="h-3 w-3" />
+                Map
+              </button>
+              <button
+                onClick={() => setRail(rail === 'response' ? null : 'response')}
+                aria-pressed={rail === 'response'}
+                className={clsx(
+                  'flex items-center gap-1.5 h-6 px-2.5 text-micro font-mono font-bold uppercase rounded-sm transition-colors duration-fast cursor-pointer',
+                  rail === 'response' ? 'bg-panel text-ink border border-line' : 'text-ink-dim hover:text-ink',
+                )}
+              >
+                <Siren className="h-3 w-3" />
+                Response
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col gap-3 relative min-h-0">
-        <SuppressionSuggestion activeFindings={findings} onChange={loadData} />
+      <div
+        className={clsx(
+          'flex-1 overflow-hidden flex flex-col gap-3 relative min-h-0',
+          demoRunning && 'max-h-[40vh]',
+        )}
+      >
+        {!demoRunning && (
+          <SuppressionSuggestion activeFindings={findings} onChange={loadData} />
+        )}
 
         {isLoading && findings.length === 0 ? (
           <div className="flex flex-col gap-2 max-w-3xl" aria-label="Loading findings">
@@ -235,20 +261,20 @@ export default function FindingsView() {
           <div
             className={clsx(
               'flex-1 min-h-0 grid gap-4',
-              rail === null && 'grid-cols-1',
-              rail === 'map' && 'grid-cols-[minmax(0,1fr)_440px]',
-              rail === 'response' && 'grid-cols-[minmax(0,1fr)_380px]',
+              (rail === null || demoRunning) && 'grid-cols-1',
+              !demoRunning && rail === 'map' && 'grid-cols-[minmax(0,1fr)_440px]',
+              !demoRunning && rail === 'response' && 'grid-cols-[minmax(0,1fr)_380px]',
             )}
           >
             <div className="min-w-0 min-h-0 overflow-hidden">
-              {triageMode === 'band' ? (
+              {demoRunning || triageMode === 'band' ? (
                 <FindingsBandList findings={filteredFindings} onChange={loadData} />
               ) : (
                 <FindingsBoard findings={filteredFindings} onChange={loadData} />
               )}
             </div>
 
-            {rail !== null && (
+            {!demoRunning && rail !== null && (
               <aside className="surface-1 bg-panel min-h-0 flex flex-col overflow-hidden">
                 <div className="h-8 border-b border-line flex items-center justify-between px-3 shrink-0">
                   <span className="text-micro font-mono uppercase tracking-[0.12em] text-ink-dim select-none">

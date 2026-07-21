@@ -44,9 +44,8 @@ export function InvestigationPanel({ findingId }: { findingId: string }) {
         <div className="flex items-start gap-2 min-w-0">
           <Bot className="h-4 w-4 text-ink-dim shrink-0 mt-0.5" />
           <p className="text-xs text-ink-dim leading-normal">
-            Run the advisory orchestrator: telemetry, knowledge, compliance, RCA,
-            lessons, and multimodal specialists gather digests; a twin validator
-            gates recommendations.
+            Advisory only — hold work / clear bay when signals converge, then run
+            the orchestrator for a gated brief (telemetry, knowledge, compliance).
           </p>
         </div>
         <Button

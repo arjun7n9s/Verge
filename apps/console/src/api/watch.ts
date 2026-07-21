@@ -1,11 +1,25 @@
 /** Continuous WatchLoop — start/stop/status. No frontend fiction. */
 
+export interface DemoPhaseRow {
+  id: string;
+  label: string;
+  at: number;
+  active: boolean;
+}
+
 export interface WatchStatus {
   running: boolean;
   mode?: string;
   scenarioId?: string | null;
   scenarioLabel?: string | null;
+  scenarioName?: string | null;
   coach?: string | null;
+  zonePrimary?: string | null;
+  phaseId?: string | null;
+  phaseLabel?: string | null;
+  phaseHint?: string | null;
+  phases?: DemoPhaseRow[];
+  elapsedS?: number;
   startedAt?: string | null;
   intervalS: number;
   ticks: number;
@@ -13,7 +27,23 @@ export interface WatchStatus {
   lastError?: string | null;
   legs: Record<string, boolean>;
   counts: Record<string, number>;
-  last?: Record<string, unknown>;
+  last?: {
+    sensors?: {
+      ok?: boolean;
+      factor?: number;
+      elapsedS?: number;
+      readings?: Array<{
+        sensorId?: string;
+        value?: number;
+        zoneId?: string;
+        kind?: string;
+      }>;
+    };
+    voice?: Record<string, unknown>;
+    vision?: Record<string, unknown>;
+    fuse?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
 }
 
 export async function fetchWatchStatus(): Promise<WatchStatus> {

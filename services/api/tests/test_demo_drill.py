@@ -19,6 +19,45 @@ def test_demo_scenario_meta():
     assert body["radioCues"] >= 6
 
 
+def test_demo_status_exposes_phase_coach_fields():
+    from verge_api.demo_scenario import load_scenario
+    from verge_api.main import app
+    from verge_api.watch_loop import controller
+
+    pack = load_scenario("compound-drill")
+    early = pack.phase_at(10)
+    assert early["phaseId"] == "baseline"
+    weak = pack.phase_at(90)
+    assert weak["phaseId"] == "weak-smell"
+    assert "alarm" in weak["phaseHint"].lower()
+
+    client = TestClient(app)
+    if controller.status.running:
+        client.post("/api/demo/stop")
+    start = client.post(
+        "/api/demo/start",
+        json={
+            "scenarioId": "compound-drill-ci",
+            "intervalS": 1.0,
+            "vision": False,
+            "voice": False,
+            "sensors": True,
+            "fuse": False,
+            "cognee": False,
+            "workers": False,
+        },
+    )
+    assert start.status_code == 200
+    watch = start.json()["watch"]
+    assert watch["mode"] == "demo"
+    assert watch.get("phaseId")
+    assert watch.get("phaseLabel")
+    assert watch.get("phaseHint")
+    assert isinstance(watch.get("phases"), list) and len(watch["phases"]) >= 4
+    stop = client.post("/api/demo/stop")
+    assert stop.status_code == 200
+
+
 def test_demo_start_compound_ci_persists_multi_source_finding():
     from verge_api.main import app
     from verge_api.watch_loop import controller

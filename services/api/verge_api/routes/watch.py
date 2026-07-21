@@ -30,7 +30,7 @@ def _legs_from_body(body: WatchStartBody) -> dict[str, bool] | None:
 
 @router.get("/watch/status")
 def watch_status() -> dict:
-    return controller.status.to_dict()
+    return controller.public_status()
 
 
 @router.post("/watch/start")

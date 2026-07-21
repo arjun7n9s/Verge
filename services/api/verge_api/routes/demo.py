@@ -33,7 +33,7 @@ def _legs_from_body(body: DemoStartBody) -> dict[str, bool] | None:
 
 @router.get("/demo/status")
 def demo_status() -> dict:
-    st = controller.status.to_dict()
+    st = controller.public_status()
     return {
         "ok": True,
         "demo": st.get("mode") == "demo" and st.get("running"),

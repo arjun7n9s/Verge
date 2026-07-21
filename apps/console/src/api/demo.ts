@@ -5,12 +5,7 @@ import type { WatchStatus } from '@/api/watch';
 export interface DemoStatus {
   ok: boolean;
   demo: boolean;
-  watch: WatchStatus & {
-    mode?: string;
-    scenarioId?: string | null;
-    scenarioLabel?: string | null;
-    coach?: string | null;
-  };
+  watch: WatchStatus;
 }
 
 export async function fetchDemoStatus(): Promise<DemoStatus> {

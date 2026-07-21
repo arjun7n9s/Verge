@@ -46,6 +46,55 @@ class VisionCue:
 
 
 @dataclass
+class DemoPhase:
+    id: str
+    label: str
+    hint: str
+    at: float
+
+
+# Default Meridian drill phases (elapsed seconds). Pack YAML may override via `phases:`.
+_DEFAULT_PHASES: list[DemoPhase] = [
+    DemoPhase(
+        id="baseline",
+        label="Baseline",
+        hint="Quiet feeds — LEL normal, radio silent, cameras idle.",
+        at=0,
+    ),
+    DemoPhase(
+        id="hot-work",
+        label="Hot work",
+        hint="Permit chatter — routine work; single streams still look benign.",
+        at=40,
+    ),
+    DemoPhase(
+        id="weak-smell",
+        label="Weak smell",
+        hint="Radio smell report; LEL creeping but still under classic alarm.",
+        at=80,
+    ),
+    DemoPhase(
+        id="people-still",
+        label="People still there",
+        hint="Camera shows people in bay — occupancy risk with rising gas.",
+        at=110,
+    ),
+    DemoPhase(
+        id="converge",
+        label="Converge",
+        hint="Voice + LEL + vision together — early compound finding.",
+        at=140,
+    ),
+    DemoPhase(
+        id="advise",
+        label="Advise",
+        hint="Open the finding — hold work / clear bay (advisory).",
+        at=170,
+    ),
+]
+
+
+@dataclass
 class ScenarioPack:
     id: str
     name: str
@@ -60,7 +109,28 @@ class ScenarioPack:
     radio: list[RadioCue] = field(default_factory=list)
     workers: list[WorkerCue] = field(default_factory=list)
     vision: list[VisionCue] = field(default_factory=list)
+    phases: list[DemoPhase] = field(default_factory=list)
     root: Path = field(default_factory=Path)
+
+    def phase_at(self, elapsed_s: float) -> dict[str, Any]:
+        """Current narrative phase for the Live Ops coach strip."""
+        phases = self.phases or list(_DEFAULT_PHASES)
+        current = phases[0]
+        for p in phases:
+            if elapsed_s >= p.at:
+                current = p
+            else:
+                break
+        return {
+            "phaseId": current.id,
+            "phaseLabel": current.label,
+            "phaseHint": current.hint,
+            "phases": [
+                {"id": p.id, "label": p.label, "at": p.at, "active": p.id == current.id}
+                for p in phases
+            ],
+            "elapsedS": round(elapsed_s, 1),
+        }
 
     def sensor_factor(self, elapsed_s: float) -> float:
         curve = self.sensor_curve
@@ -134,6 +204,32 @@ def load_scenario(scenario_id: str = "compound-drill") -> ScenarioPack:
         )
     curve_raw = ((raw.get("sensors") or {}).get("curve")) or []
     curve = [(float(p["at"]), float(p["factor"])) for p in curve_raw]
+    phases: list[DemoPhase] = []
+    for item in raw.get("phases") or []:
+        phases.append(
+            DemoPhase(
+                id=str(item.get("id") or "phase"),
+                label=str(item.get("label") or item.get("id") or "Phase"),
+                hint=str(item.get("hint") or "").strip(),
+                at=float(item.get("at", 0)),
+            )
+        )
+    if not phases:
+        # Scale default Meridian phases when pack duration differs (e.g. CI).
+        duration = float(raw.get("duration_s") or 210)
+        scale = duration / 210.0 if duration > 0 else 1.0
+        if abs(scale - 1.0) > 0.05:
+            phases = [
+                DemoPhase(
+                    id=p.id,
+                    label=p.label,
+                    hint=p.hint,
+                    at=round(p.at * scale, 1),
+                )
+                for p in _DEFAULT_PHASES
+            ]
+        else:
+            phases = list(_DEFAULT_PHASES)
     return ScenarioPack(
         id=str(raw.get("id") or scenario_id),
         name=str(raw.get("name") or scenario_id),
@@ -148,5 +244,6 @@ def load_scenario(scenario_id: str = "compound-drill") -> ScenarioPack:
         radio=radio,
         workers=workers,
         vision=vision,
+        phases=phases,
         root=root,
     )

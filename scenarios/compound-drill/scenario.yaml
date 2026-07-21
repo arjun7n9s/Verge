@@ -9,6 +9,33 @@ interval_s: 3.0
 zone_primary: B-04
 zone_secondary: B-05
 
+# Narrative phases for Live Ops coach (elapsed seconds).
+phases:
+  - id: baseline
+    label: Baseline
+    at: 0
+    hint: Quiet feeds — LEL normal, radio silent, cameras idle.
+  - id: hot-work
+    label: Hot work
+    at: 40
+    hint: Permit chatter — routine work; single streams still look benign.
+  - id: weak-smell
+    label: Weak smell
+    at: 80
+    hint: Radio smell report; LEL creeping but still under classic alarm.
+  - id: people-still
+    label: People still there
+    at: 110
+    hint: Camera shows people in bay — occupancy risk with rising gas.
+  - id: converge
+    label: Converge
+    at: 140
+    hint: Voice + LEL + vision together — early compound finding.
+  - id: advise
+    label: Advise
+    at: 170
+    hint: Open the finding — hold work / clear bay (advisory).
+
 permit:
   permitId: PW-DEMO-HW-B04
   kind: hot-work

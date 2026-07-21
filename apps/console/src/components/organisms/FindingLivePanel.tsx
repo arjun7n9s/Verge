@@ -31,10 +31,21 @@ interface TimelineMark {
   audioClipUri?: string | null;
 }
 
+const LEG_LABEL: Record<TimelineKind, string> = {
+  vision: 'Camera',
+  radio: 'Radio',
+  sensor: 'Sensor',
+};
+
 function parseTs(ts: string | undefined): number {
   if (!ts) return 0;
   const n = Date.parse(ts);
   return Number.isFinite(n) ? n : 0;
+}
+
+function hasThreeLegLineage(lineage: string[] | undefined): boolean {
+  const kinds = new Set((lineage || []).map((x) => String(x).split(':')[0]));
+  return kinds.has('voice') && kinds.has('reading') && kinds.has('vision');
 }
 
 export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
@@ -160,8 +171,21 @@ export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
     return s === 'active' || s === 'open' || s === 'issued' || !s;
   });
 
+  const threeLeg = hasThreeLegLineage(finding.lineage);
+
   return (
     <div className="flex flex-col gap-4">
+      {threeLeg && (
+        <div className="border border-line rounded-md bg-bg/50 px-3 py-2.5">
+          <p className="text-sm text-ink leading-snug">
+            Converged from radio · LEL · camera — single streams were weak alone.
+          </p>
+          <p className="text-xs text-ink-dim mt-1 leading-relaxed">
+            Advisory next: hold hot work, clear the bay, confirm LEL — then Investigate.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Live zone camera */}
         <div className="border border-line rounded-md bg-panel overflow-hidden flex flex-col min-h-[160px]">
@@ -236,7 +260,7 @@ export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
           <Clock className="h-3 w-3" />
           Incident timeline
           <span className="normal-case tracking-normal ml-auto tabular-nums">
-            {marks.length} marks · vision / radio / sensors
+            {marks.length} marks · Camera / Radio / Sensor
           </span>
         </div>
 
@@ -246,6 +270,20 @@ export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
           </span>
         ) : (
           <>
+            <div className="flex gap-3 text-micro font-mono uppercase tracking-[0.08em] text-ink-dim">
+              <span>
+                <span className="inline-block w-2 h-2 rounded-sm border border-watch bg-watch/40 mr-1 align-middle" />
+                Camera
+              </span>
+              <span>
+                <span className="inline-block w-2 h-2 rounded-sm border border-ink/50 bg-panel-2 mr-1 align-middle" />
+                Radio
+              </span>
+              <span>
+                <span className="inline-block w-2 h-2 rounded-sm border border-line bg-bg mr-1 align-middle" />
+                Sensor
+              </span>
+            </div>
             <div className="relative h-10">
               <div className="absolute inset-x-0 top-1/2 h-px bg-line" />
               {marks.map((m, i) => {
@@ -254,7 +292,7 @@ export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
                   <button
                     key={m.id}
                     type="button"
-                    title={`${m.kind}: ${m.label}`}
+                    title={`${LEG_LABEL[m.kind]}: ${m.label}`}
                     onClick={() => setCursor(i)}
                     className={clsx(
                       'absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-sm border',
@@ -283,7 +321,9 @@ export function FindingLivePanel({ finding }: { finding: RiskFinding }) {
             {active && (
               <div className="flex flex-col sm:flex-row gap-3 items-start">
                 <div className="flex-1 min-w-0">
-                  <div className="text-micro font-mono uppercase text-ink-dim">{active.kind}</div>
+                  <div className="text-micro font-mono uppercase text-ink-dim">
+                    {LEG_LABEL[active.kind]}
+                  </div>
                   <div className="text-sm text-ink mt-0.5">{active.label}</div>
                   {active.detail && (
                     <div className="text-micro font-mono text-ink-dim mt-0.5">{active.detail}</div>

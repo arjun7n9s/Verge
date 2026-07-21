@@ -126,6 +126,20 @@ class WatchController:
     def bind_app(self, app) -> None:
         self._app = app
 
+    def public_status(self) -> dict[str, Any]:
+        """Status wire including demo phase coach fields when a pack is active."""
+        d = self.status.to_dict()
+        pack = self._pack
+        if (
+            pack is not None
+            and self.status.mode == "demo"
+            and self.status.running
+        ):
+            d.update(pack.phase_at(self._elapsed_s()))
+            d["scenarioName"] = pack.name
+            d["zonePrimary"] = pack.zone_primary
+        return d
+
     def configure_from_env(self) -> None:
         self.status.interval_s = max(1.0, _env_float("VERGE_WATCH_INTERVAL_S", 3.0))
         self.status.legs = {
@@ -171,7 +185,7 @@ class WatchController:
     ) -> dict:
         with self._lock:
             if self.status.running and self._thread and self._thread.is_alive():
-                return self.status.to_dict()
+                return self.public_status()
             self.configure_from_env()
             pack: ScenarioPack | None = None
             if scenario_id:
@@ -219,7 +233,7 @@ class WatchController:
                 daemon=True,
             )
             self._thread.start()
-            return self.status.to_dict()
+            return self.public_status()
 
     def start_demo(
         self,
@@ -251,7 +265,7 @@ class WatchController:
             else:
                 os.environ["VERGE_VOICE_AUTO_FUSE"] = self._voice_auto_fuse_prev
             self._voice_auto_fuse_prev = None
-            return self.status.to_dict()
+            return self.public_status()
 
     def _seed_demo_permit(self, pack: ScenarioPack) -> None:
         app = self._app
@@ -727,7 +741,15 @@ class WatchController:
             }
             buf.ingest(payload)
             self.status.counts["sensorReads"] += 1
-            ingested.append({"sensorId": sid, "value": value, "zoneId": zone_id})
+            ingested.append(
+                {
+                    "sensorId": sid,
+                    "value": value,
+                    "zoneId": zone_id,
+                    "kind": kind,
+                    "unit": unit,
+                }
+            )
         return {
             "ok": True,
             "elapsedS": round(elapsed, 1),
