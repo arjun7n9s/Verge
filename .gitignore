@@ -32,6 +32,13 @@ eval/out/
 data/
 .DS_Store
 
+# Generated drill media (large; regenerate via scripts/gen_cctv_drill.py)
+scenarios/**/cameras/*.mp4
+scenarios/**/cameras/*.png
+scenarios/**/cameras/jobs.json
+scenarios/**/radio/*
+!scenarios/**/radio/.gitkeep
+
 # Editors
 .idea/
 .vscode/*
